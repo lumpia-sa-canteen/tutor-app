@@ -1,0 +1,51 @@
+.scene {
+  --mx: 0;
+  --my: 0;
+  --bar-h: 11vh;
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: #c9d0da;
+}
+
+/* background picture (moves opposite to the cursor) */
+.scene__bg {
+  position: absolute;
+  inset: -40px;
+  background-size: cover;
+  background-position: center;
+  transform: translate3d(calc(var(--mx) * -20px), calc(var(--my) * -14px), 0);
+  will-change: transform;
+}
+
+/* soft shade so the menu text stays readable */
+.scene__bg::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to bottom, transparent 55%, rgba(20, 28, 40, 0.55));
+}
+
+/* holds the white bar and the menu (follows the cursor) */
+.scene__panel {
+  position: absolute;
+  top: 76%;
+  left: 46.5%;
+  right: -80px;
+  transform: translate3d(calc(var(--mx) * 40px), calc(var(--my) * 24px), 0);
+  will-change: transform;
+}
+
+/* the white slanted bar */
+.scene__bar {
+    display: flex;
+  height: var(--bar-h);
+  background: #fff;
+  clip-path: polygon(0 0, 100% 0, 100% 100%, calc(var(--bar-h) * 1.2) 100%);
+}
+
+@media (max-width: 640px) {
+  .scene { --bar-h: 8vh; }
+  .scene__panel { left: 20%; }
+}
