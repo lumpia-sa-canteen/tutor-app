@@ -1,36 +1,58 @@
 import { useRef, useState } from 'react';
 import './IntroScreen.css';
 
-const FADE_MS = 3000; // fade duration, match this to your audio
-
-export default function IntroScreen({ onDone }) {
-  const audioRef = useRef(null);
+export default function IntroScreen({ audioRef, onStart, onDone }) {
+  const overlayRef = useRef(null);
   const [started, setStarted] = useState(false);
 
-  const handleStart = () => {
+  const handleStart = async () => {
     if (started) return;
-    setStarted(true);              // starts the CSS fade
-    const audio = audioRef.current;
-    audio.currentTime = 0;
-    audio.play().catch(() => {});  // starts the audio at the same moment
-  };
+    setStarted(true);
+    onStart();                       // runs inside the click, used to unlock the bgm
 
-  const handleTransitionEnd = (e) => {
-    // only react to the overlay's own opacity fade
-    if (e.target === e.currentTarget && e.propertyName === 'opacity') {
-      onDone();
+    const audio = audioRef.current;
+    const overlay = overlayRef.current;
+    audio.currentTime = 0;
+    audio.volume = 1;
+
+    try {
+      await audio.play();            // resolves when the sound really starts
+    } catch {
+      onDone();                      // audio blocked, skip straight to the menu
+      return;
     }
+
+    // the white screen follows the audio's own clock
+    let raf;
+    const tick = () => {
+      const d = audio.duration;
+      if (d) {
+        const t = Math.min(audio.currentTime / d, 1);
+        const eased = t * t * (3 - 2 * t);          // smooth start and end
+        overlay.style.opacity = String(1 - eased);
+      }
+      raf = requestAnimationFrame(tick);
+    };
+    tick();
+
+    audio.addEventListener(
+      'ended',
+      () => {
+        cancelAnimationFrame(raf);
+        overlay.style.opacity = '0';
+        onDone();                    // remove overlay, App starts the bgm
+      },
+      { once: true }
+    );
   };
 
   return (
     <div
-      className={`intro ${started ? 'intro--fade' : ''}`}
-      style={{ transitionDuration: `${FADE_MS}ms` }}
+      ref={overlayRef}
+      className={`intro ${started ? 'intro--started' : ''}`}
       onClick={handleStart}
-      onTransitionEnd={handleTransitionEnd}
     >
-      <audio ref={audioRef} src="/resources/okaeri_sfx.mp3" preload="auto" />
-      <p className="intro__hint">Click to start</p>
+      <p className="intro__hint">Dive to DWDB-221E</p>
     </div>
   );
 }
