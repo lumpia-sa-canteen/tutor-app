@@ -7,7 +7,7 @@ export default function MainMenu({ items, onSelect }) {
         {items.map((item) => (
           <li key={item.id} className="menu__item">
             <button className="menu__button" onClick={() => onSelect(item.id)}>
-              {item.label}
+              <span className="menu__label">{item.label}</span>
             </button>
           </li>
         ))}
