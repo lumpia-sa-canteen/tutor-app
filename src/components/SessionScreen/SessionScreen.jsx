@@ -81,6 +81,9 @@ export default function SessionScreen({
         )}
       </div>
 
+      {/* blurs the character and dialog while the menu is open */}
+      <div className={`session__blur ${menuOpen ? 'session__blur--on' : ''}`} />
+
       <div className={`session__menu ${menuOpen ? 'session__menu--open' : ''}`}>
         <button
           className="session__burger"

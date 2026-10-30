@@ -1,6 +1,6 @@
 .session {
-  --mx: 0;
-  --my: 0;
+  --mx: --char-h: 175%;
+  --my: --char-top: 3%;
 
   /* menu bars: change --sbar-bg to try the other colors */
   --sbar-h: clamp(2.8rem, 6.5vh, 3.8rem);
@@ -23,8 +23,9 @@
 .session__character {
   position: absolute;
   left: 50%;
-  top: 4%;
-  height: 105%;
+  top: var(--char-top);
+  height: var(--char-h);
+  max-width: none;
   transform: translate3d(calc(-50% + var(--mx) * -14px), calc(var(--my) * -8px), 0);
   will-change: transform;
   object-fit: contain;
@@ -211,6 +212,12 @@
   flex: none;
 }
 
+/* Speed and Auto Play have no circle, so their labels are indented by the circle's
+   width plus the gap. This makes all three labels step down like the bars do. */
+.session__bar > .session__bar-label:first-child {
+  margin-left: calc(var(--sbar-h) * 0.56 + 1rem);
+}
+
 /* back: the circled arrow, same as the main menu's but white */
 .session__circle {
   flex: none;
@@ -284,4 +291,23 @@
   border-color: #fff;
   color: #111;
   opacity: 1;
+}
+
+.session__blur
+{
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    pointer-events: none;
+    background: rgba(0, 0, 0, 0);
+    -webkit-backdrop-filter: blur(0px);
+    backdrop-filter: blur(0px);
+    transition: backdrop-filter 0.4s ease, -webkit-backdrop-filter 0.4s ease, background 0.4s ease;
+}
+
+.session__blur--on
+{
+    background: rgba(0, 0, 0, 0);
+    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px);
 }

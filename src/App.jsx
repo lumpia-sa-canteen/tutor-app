@@ -282,7 +282,7 @@ export default function App() {
         </ParallaxScene>
       ) : (
         <SessionScreen
-          character="/resources/character.png"
+          character="/resources/Civilight_Eterna.png"
           lines={sessionLines}
           onBack={returnToMenu}
         />
