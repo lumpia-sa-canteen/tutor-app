@@ -23,12 +23,13 @@ const subMenus = {
   ],
   menu: [
     { id: 'volume', label: 'Volume' },
-    { id: 'show-hints', label: 'Show Hints'},
+    { id: 'show-hints', label: 'Show Hints' },
   ],
 };
 
 const BGM_VOLUME = 0.6;
 const BGM_FADE_IN_MS = 2000;
+const EXIT_FADE_MS = 2500;   // black screen and music fade out together
 
 function fadeVolume(audio, from, to, ms) {
   const start = performance.now();
@@ -43,9 +44,10 @@ function fadeVolume(audio, from, to, ms) {
 
 export default function App() {
   const [introDone, setIntroDone] = useState(false);
-  const [view, setView] = useState('main');          // 'main', 'start' or 'load'
+  const [view, setView] = useState('main');          // 'main', 'start', 'load' or 'menu'
   const [nextView, setNextView] = useState(null);    // where the bar is heading
   const [barHidden, setBarHidden] = useState(false);
+  const [exiting, setExiting] = useState(false);
   const sfxRef = useRef(null);
   const bgmRef = useRef(null);
 
@@ -58,8 +60,28 @@ export default function App() {
     setBarHidden(true);
   };
 
+  const handleExit = () => {
+    if (exiting) return;
+    setExiting(true);                // black screen starts fading in
+
+    const bgm = bgmRef.current;
+    fadeVolume(bgm, bgm.volume, 0, EXIT_FADE_MS);   // music fades out at the same time
+
+    setTimeout(() => {
+      bgm.pause();
+      window.close();                // works only for tabs opened by a script
+      window.location.replace('about:blank');       // fallback: blank page
+    }, EXIT_FADE_MS + 400);
+  };
+
   const handleSelect = (id) => {
-    if (subMenus[id]) {              // Start and Load open their sub menus
+    if (exiting) return;
+
+    if (id === 'exit') {
+      handleExit();
+      return;
+    }
+    if (subMenus[id]) {              // Start, Load and Menu open their sub menus
       goTo(id);
       return;
     }
@@ -114,6 +136,20 @@ export default function App() {
           onDone={handleIntroDone}
         />
       )}
+
+      {/* black screen for exiting, sits above everything */}
+      <div
+        aria-hidden="true"
+        style={{
+          position: 'fixed',
+          inset: 0,
+          zIndex: 10000,
+          background: '#000',
+          opacity: exiting ? 1 : 0,
+          pointerEvents: exiting ? 'auto' : 'none',   // blocks clicks once exiting
+          transition: `opacity ${EXIT_FADE_MS}ms ease-in-out`,
+        }}
+      />
     </>
   );
 }
