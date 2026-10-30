@@ -56,7 +56,7 @@
 .scene__bar--extra
 {
   position: absolute;
-  left: 0;
+  left: calc(var(--bar-h) * 0.8);
   right: 0;
   bottom: calc(100% + 0.6rem);
   visibility: visible;
