@@ -13,8 +13,6 @@
 .scene__bg {
   position: absolute;
   inset: -40px;
-  background-size: cover;
-  background-position: center;
   transform: translate3d(calc(var(--mx) * -20px), calc(var(--my) * -14px), 0);
   will-change: transform;
 }

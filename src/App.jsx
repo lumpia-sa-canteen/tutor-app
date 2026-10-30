@@ -4,8 +4,15 @@ import MainMenu from './components/MainMenu/MainMenu';
 import IntroScreen from './components/IntroScreen/IntroScreen';
 import { menuItems } from './data/menuItems';
 
-const BGM_VOLUME = 0.6;        // 0 to 1
-const BGM_FADE_IN_MS = 2000;   // how long the bgm takes to fade in
+const backgrounds = [
+  '/resources/theresa1.jpg',
+  '/resources/theresa2.jpg',
+  '/resources/theresa3.jpg',
+  '/resources/theresa4.jpg'
+];
+
+const BGM_VOLUME = 0.6;
+const BGM_FADE_IN_MS = 2000;
 
 function fadeVolume(audio, from, to, ms) {
   const start = performance.now();
@@ -27,14 +34,12 @@ export default function App() {
     console.log('Selected:', id);
   };
 
-  // runs during the click: lets the browser (especially Safari) allow the bgm later
   const handleIntroStart = () => {
     const bgm = bgmRef.current;
     bgm.volume = 0;
     bgm.play().then(() => bgm.pause()).catch(() => {});
   };
 
-  // runs when the intro sound ends
   const handleIntroDone = () => {
     setIntroDone(true);
     const bgm = bgmRef.current;
@@ -49,7 +54,7 @@ export default function App() {
       <audio ref={sfxRef} src="/resources/okaeri_sfx.mp3" preload="auto" />
       <audio ref={bgmRef} src="/resources/main_menu_bgm.mp3" preload="auto" loop />
 
-      <ParallaxScene image="/resources/theresa1.jpg">
+      <ParallaxScene images={backgrounds} running={introDone}>
         <MainMenu items={menuItems} onSelect={handleSelect} />
       </ParallaxScene>
 
