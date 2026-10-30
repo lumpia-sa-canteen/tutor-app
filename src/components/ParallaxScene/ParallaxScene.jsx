@@ -6,8 +6,10 @@ export default function ParallaxScene({
   images,
   running = true,
   title = 'Civilight-Eterna',
-  barHidden = false,      // true slides the white bar off to the right
-  onBarHidden,            // called once the bar has fully slid out
+  barHidden = false,        // true slides the white bar off to the right
+  onBarHidden,              // called once the bar has fully slid out
+  extraBar = null,          // optional second bar stacked above the main one
+  extraBarHidden = true,    // true keeps the second bar off screen
   children,
 }) {
   const ref = useParallax();
@@ -28,6 +30,14 @@ export default function ParallaxScene({
       <h1 className="scene__title">{title}</h1>
 
       <div className="scene__panel">
+        {extraBar && (
+          <div
+            className={`scene__bar scene__bar--extra ${extraBarHidden ? 'scene__bar--out' : ''}`}
+          >
+            {extraBar}
+          </div>
+        )}
+
         <div
           className={`scene__bar ${barHidden ? 'scene__bar--out' : ''}`}
           onTransitionEnd={handleBarTransitionEnd}

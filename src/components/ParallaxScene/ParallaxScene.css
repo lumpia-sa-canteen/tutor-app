@@ -53,6 +53,22 @@
   transition: transform 0.3s cubic-beizer(0.55, 0, 1, 0.45);
 }
 
+.scene__bar--extra
+{
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: calc(100% + 0.6rem);
+  visibility: visible;
+  transition: transform 0.45s cubic-bezier(0.22, 1, 0.36, 1) 0.18s, visibility 0s;
+}
+
+.scene__bar--extra.scene__bar--out
+{
+  visibility: hidden;
+  transition: transform 0.3s cubic-bezier(0.55, 0, 1, 0.45), visibility 0s linear 0.3s;
+}
+
 @media (max-width: 640px) {
   .scene { --bar-h: 8vh; }
   .scene__panel { left: 20%; }
