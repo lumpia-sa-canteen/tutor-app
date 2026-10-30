@@ -3,6 +3,7 @@ import ParallaxScene from './components/ParallaxScene/ParallaxScene';
 import MainMenu from './components/MainMenu/MainMenu';
 import VolumeControl, { VolumeSlider } from './components/VolumeControl/VolumeControl';
 import IntroScreen from './components/IntroScreen/IntroScreen';
+import SessionScreen from './components/SessionScreen/SessionScreen';
 import { menuItems } from './data/menuItems';
 
 const backgrounds = [
@@ -40,12 +41,18 @@ const CLICK_SFX_SRC = '/resources/sfx1.mp3';
 const BGM_FADE_IN_MS = 2000;
 const EXIT_FADE_MS = 2500;   // black screen and music fade out together
 
-function fadeVolume(audio, from, to, ms) {
+// New Session transition                                                  // changed
+const MENU_FADE_OUT_MS = 5000;    // menu fades to black while its music fades out
+const SESSION_FADE_IN_MS = 5000;  // session screen fades in while its music fades in
+
+// smooth = true uses an ease-in-out curve so it matches the screen fade     // changed
+function fadeVolume(audio, from, to, ms, smooth = false) {
   const start = performance.now();
   audio.volume = from;
   const step = (now) => {
     const t = Math.min((now - start) / ms, 1);
-    audio.volume = from + (to - from) * t;
+    const k = smooth ? t * t * (3 - 2 * t) : t;
+    audio.volume = from + (to - from) * k;
     if (t < 1) requestAnimationFrame(step);
   };
   requestAnimationFrame(step);
@@ -53,15 +60,20 @@ function fadeVolume(audio, from, to, ms) {
 
 export default function App() {
   const [introDone, setIntroDone] = useState(false);
+  const [screen, setScreen] = useState('menu');      // 'menu' or 'session'
   const [view, setView] = useState('main');          // 'main', 'start', 'load', 'menu' or 'volume'
   const [nextView, setNextView] = useState(null);    // where the bar is heading
   const [barHidden, setBarHidden] = useState(false);
+  const [curtain, setCurtain] = useState(false);     // black overlay for screen changes
+  const [curtainMs, setCurtainMs] = useState(MENU_FADE_OUT_MS);   // changed: fade length of the curtain
   const [exiting, setExiting] = useState(false);
   const [volume, setVolume] = useState(60);          // music, 0 to 100
   const [sfxVolume, setSfxVolume] = useState(80);    // button sounds, 0 to 100
   const sfxVolumeRef = useRef(0.8);                  // lets playClick read the latest level
+  const busyRef = useRef(false);                     // true while a screen change runs
   const sfxRef = useRef(null);                       // the intro sound
-  const bgmRef = useRef(null);
+  const bgmRef = useRef(null);                       // menu music
+  const sessionBgmRef = useRef(null);                // New Session music
 
   const items = subMenus[view] ?? menuItems;
 
@@ -98,6 +110,38 @@ export default function App() {
     sfxVolumeRef.current = v / 100;
   };
 
+  // menu -> New Session screen                                              // changed
+  const startSession = () => {
+    if (busyRef.current) return;
+    busyRef.current = true;
+
+    // 1. the menu fades to black while the menu music fades out, same duration
+    const bgm = bgmRef.current;
+    setCurtainMs(MENU_FADE_OUT_MS);
+    setCurtain(true);
+    fadeVolume(bgm, bgm.volume, 0, MENU_FADE_OUT_MS, true);
+
+    setTimeout(() => {
+      // 2. fully black and silent: swap to the session screen
+      bgm.pause();
+      setScreen('session');
+      setView('main');
+
+      // 3. the session screen fades in while its music fades in, same duration
+      const sessionBgm = sessionBgmRef.current;
+      sessionBgm.currentTime = 0;
+      sessionBgm.volume = 0;
+      sessionBgm.play().catch(() => {});
+      fadeVolume(sessionBgm, 0, volume / 100, SESSION_FADE_IN_MS, true);
+      setCurtainMs(SESSION_FADE_IN_MS);
+      setCurtain(false);
+
+      setTimeout(() => {
+        busyRef.current = false;
+      }, SESSION_FADE_IN_MS);
+    }, MENU_FADE_OUT_MS);
+  };
+
   const handleExit = () => {
     if (exiting) return;
     setExiting(true);                // black screen starts fading in
@@ -113,10 +157,14 @@ export default function App() {
   };
 
   const handleSelect = (id) => {
-    if (exiting) return;
+    if (exiting || busyRef.current) return;
 
     if (id === 'exit') {
       handleExit();
+      return;
+    }
+    if (id === 'new-session') {
+      startSession();
       return;
     }
     if (subMenus[id] || id === 'volume') {   // sub menus and the volume screen
@@ -138,6 +186,11 @@ export default function App() {
     const bgm = bgmRef.current;
     bgm.volume = 0;
     bgm.play().then(() => bgm.pause()).catch(() => {});
+
+    // unlock the session music too, so it is allowed to start later
+    const sessionBgm = sessionBgmRef.current;
+    sessionBgm.volume = 0;
+    sessionBgm.play().then(() => sessionBgm.pause()).catch(() => {});
   };
 
   const handleIntroDone = () => {
@@ -153,36 +206,44 @@ export default function App() {
     <>
       <audio ref={sfxRef} src="/resources/okaeri_sfx.mp3" preload="auto" />
       <audio ref={bgmRef} src="/resources/main_menu_bgm.mp3" preload="auto" loop />
+      <audio ref={sessionBgmRef} src="/resources/session_screen_bgm1.mp3" preload="auto" loop />
 
-      <ParallaxScene
-        images={backgrounds}
-        running={introDone}
-        barHidden={barHidden}
-        onBarHidden={handleBarHidden}
-        extraBar={
-          <VolumeSlider
-            label="SFX"
-            value={sfxVolume}
-            onChange={handleSfxChange}
-            onCommit={playClick}
-          />
-        }
-        extraBarHidden={barHidden || view !== 'volume'}
-      >
-        {view === 'volume' ? (
-          <VolumeControl
-            volume={volume}
-            onChange={handleVolumeChange}
-            onBack={() => goTo(backTarget.volume)}
-          />
-        ) : (
-          <MainMenu
-            items={items}
-            onSelect={handleSelect}
-            onBack={backTarget[view] ? () => goTo(backTarget[view]) : undefined}
-          />
-        )}
-      </ParallaxScene>
+      {screen === 'menu' ? (
+        <ParallaxScene
+          images={backgrounds}
+          running={introDone}
+          barHidden={barHidden}
+          onBarHidden={handleBarHidden}
+          extraBar={
+            <VolumeSlider
+              label="SFX"
+              value={sfxVolume}
+              onChange={handleSfxChange}
+              onCommit={playClick}
+            />
+          }
+          extraBarHidden={barHidden || view !== 'volume'}
+        >
+          {view === 'volume' ? (
+            <VolumeControl
+              volume={volume}
+              onChange={handleVolumeChange}
+              onBack={() => goTo(backTarget.volume)}
+            />
+          ) : (
+            <MainMenu
+              items={items}
+              onSelect={handleSelect}
+              onBack={backTarget[view] ? () => goTo(backTarget[view]) : undefined}
+            />
+          )}
+        </ParallaxScene>
+      ) : (
+        <SessionScreen
+          character="/resources/character.png"
+          text="Welcome back. Shall we begin?"
+        />
+      )}
 
       {!introDone && (
         <IntroScreen
@@ -191,6 +252,20 @@ export default function App() {
           onDone={handleIntroDone}
         />
       )}
+
+      {/* black curtain for changing screens */}
+      <div
+        aria-hidden="true"
+        style={{
+          position: 'fixed',
+          inset: 0,
+          zIndex: 9500,
+          background: '#000',
+          opacity: curtain ? 1 : 0,
+          pointerEvents: curtain ? 'auto' : 'none',
+          transition: `opacity ${curtainMs}ms ease-in-out`,   // changed: length comes from state
+        }}
+      />
 
       {/* black screen for exiting, sits above everything */}
       <div

@@ -1,0 +1,72 @@
+.session {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  background: #000;
+  overflow: hidden;
+}
+
+/* centered character, taller than the screen so the legs sink behind the dialog */
+.session__character {
+  position: absolute;
+  left: 50%;
+  top: 4%;
+  height: 105%;
+  transform: translateX(-50%);
+  object-fit: contain;
+  object-position: top center;
+  user-select: none;
+  pointer-events: none;
+}
+
+/* dialog: centered at the bottom, does not fill the screen */
+.session__dialog {
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  transform: translateX(-50%);   /* also gives it its own stacking context */
+  width: min(72vw, 1000px);
+  min-height: 30vh;
+  box-sizing: border-box;
+  padding: 8vh 4rem 5vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* black that fades out toward the top, and softly toward the left and right sides */
+.session__dialog::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: linear-gradient(
+    to top,
+    #000 0%,
+    rgba(0, 0, 0, 0.9) 55%,
+    rgba(0, 0, 0, 0) 100%
+  );
+  -webkit-mask-image: linear-gradient(to right, transparent, #000 14%, #000 86%, transparent);
+  mask-image: linear-gradient(to right, transparent, #000 14%, #000 86%, transparent);
+}
+
+/* the faint white haze fading down from the top edge */
+.session__dialog::after {
+  content: '';
+  position: absolute;
+  inset: 0 0 55% 0;
+  z-index: -1;
+  background: linear-gradient(to bottom, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0));
+  -webkit-mask-image: linear-gradient(to right, transparent, #000 14%, #000 86%, transparent);
+  mask-image: linear-gradient(to right, transparent, #000 14%, #000 86%, transparent);
+}
+
+.session__text {
+  margin: 0;
+  color: #fff;
+  text-align: center;
+  font-size: clamp(1rem, 1.6vw, 1.5rem);
+  line-height: 1.7;
+  letter-spacing: 0.03em;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.8);
+}
