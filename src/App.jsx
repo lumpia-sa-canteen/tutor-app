@@ -37,15 +37,26 @@ const backTarget = {
   volume: 'menu',
 };
 
+// the dialogue shown on the session screen, one entry per click   // changed
+const sessionLines = [
+  'Welcome back. Shall we begin?',
+  'Take your time. There is no rush here.',
+  'Whenever you are ready, tell me what you would like to work on today.',
+  'I will be right here with you.',
+];
+
 const CLICK_SFX_SRC = '/resources/sfx1.mp3';
 const BGM_FADE_IN_MS = 2000;
 const EXIT_FADE_MS = 2500;   // black screen and music fade out together
 
-// New Session transition                                                  // changed
+// New Session transition
 const MENU_FADE_OUT_MS = 5000;    // menu fades to black while its music fades out
 const SESSION_FADE_IN_MS = 5000;  // session screen fades in while its music fades in
 
-// smooth = true uses an ease-in-out curve so it matches the screen fade     // changed
+// Back to menu transition                                          // changed
+const RETURN_FADE_MS = 2500;      // fade length each way (to black, then back in)
+
+// smooth = true uses an ease-in-out curve so it matches the screen fade
 function fadeVolume(audio, from, to, ms, smooth = false) {
   const start = performance.now();
   audio.volume = from;
@@ -65,7 +76,7 @@ export default function App() {
   const [nextView, setNextView] = useState(null);    // where the bar is heading
   const [barHidden, setBarHidden] = useState(false);
   const [curtain, setCurtain] = useState(false);     // black overlay for screen changes
-  const [curtainMs, setCurtainMs] = useState(MENU_FADE_OUT_MS);   // changed: fade length of the curtain
+  const [curtainMs, setCurtainMs] = useState(MENU_FADE_OUT_MS);   // fade length of the curtain
   const [exiting, setExiting] = useState(false);
   const [volume, setVolume] = useState(60);          // music, 0 to 100
   const [sfxVolume, setSfxVolume] = useState(80);    // button sounds, 0 to 100
@@ -110,7 +121,7 @@ export default function App() {
     sfxVolumeRef.current = v / 100;
   };
 
-  // menu -> New Session screen                                              // changed
+  // menu -> New Session screen
   const startSession = () => {
     if (busyRef.current) return;
     busyRef.current = true;
@@ -140,6 +151,37 @@ export default function App() {
         busyRef.current = false;
       }, SESSION_FADE_IN_MS);
     }, MENU_FADE_OUT_MS);
+  };
+
+  // session screen -> main menu (the Back bar)                      // changed
+  const returnToMenu = () => {
+    if (busyRef.current) return;
+    busyRef.current = true;
+
+    // 1. the session screen fades to black while its music fades out
+    const sessionBgm = sessionBgmRef.current;
+    setCurtainMs(RETURN_FADE_MS);
+    setCurtain(true);
+    fadeVolume(sessionBgm, sessionBgm.volume, 0, RETURN_FADE_MS, true);
+
+    setTimeout(() => {
+      // 2. black and silent: swap back to the menu
+      sessionBgm.pause();
+      setScreen('menu');
+      setView('main');
+
+      // 3. the menu fades in while the menu music fades in
+      const bgm = bgmRef.current;
+      bgm.currentTime = 0;
+      bgm.volume = 0;
+      bgm.play().catch(() => {});
+      fadeVolume(bgm, 0, volume / 100, RETURN_FADE_MS, true);
+      setCurtain(false);
+
+      setTimeout(() => {
+        busyRef.current = false;
+      }, RETURN_FADE_MS);
+    }, RETURN_FADE_MS);
   };
 
   const handleExit = () => {
@@ -241,7 +283,8 @@ export default function App() {
       ) : (
         <SessionScreen
           character="/resources/character.png"
-          text="Welcome back. Shall we begin?"
+          lines={sessionLines}
+          onBack={returnToMenu}
         />
       )}
 
@@ -263,7 +306,7 @@ export default function App() {
           background: '#000',
           opacity: curtain ? 1 : 0,
           pointerEvents: curtain ? 'auto' : 'none',
-          transition: `opacity ${curtainMs}ms ease-in-out`,   // changed: length comes from state
+          transition: `opacity ${curtainMs}ms ease-in-out`,
         }}
       />
 

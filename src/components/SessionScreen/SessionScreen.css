@@ -1,40 +1,53 @@
 .session {
+  --mx: 0;
+  --my: 0;
+
+  /* menu bars: change --sbar-bg to try the other colors */
+  --sbar-h: clamp(2.8rem, 6.5vh, 3.8rem);
+  --sbar-step: calc(var(--sbar-h) * 0.9);      /* how far each bar steps to the right */
+  --sbar-bg: rgba(201, 208, 218, 0.16);        /* frosted steel */
+  --sbar-bg-hover: rgba(201, 208, 218, 0.28);
+  --sbar-line: rgba(255, 255, 255, 0.18);
+  --sbar-text: rgba(255, 255, 255, 0.92);
+  /* smoky graphite: rgba(90, 96, 108, 0.55)  |  cool slate: rgba(100, 116, 139, 0.45)  |  warm ash: rgba(150, 144, 140, 0.35) */
+
   position: fixed;
   inset: 0;
   z-index: 50;
   background: #000;
   overflow: hidden;
+  user-select: none;
 }
 
-/* centered character, taller than the screen so the legs sink behind the dialog */
+/* ---------- character (moves opposite to the cursor) ---------- */
 .session__character {
   position: absolute;
   left: 50%;
   top: 4%;
   height: 105%;
-  transform: translateX(-50%);
+  transform: translate3d(calc(-50% + var(--mx) * -14px), calc(var(--my) * -8px), 0);
+  will-change: transform;
   object-fit: contain;
   object-position: top center;
-  user-select: none;
   pointer-events: none;
 }
 
-/* dialog: centered at the bottom, does not fill the screen */
+/* ---------- dialog (moves with the cursor) ---------- */
 .session__dialog {
   position: absolute;
   left: 50%;
-  bottom: 0;
-  transform: translateX(-50%);   /* also gives it its own stacking context */
+  bottom: -24px;                 /* a little extra below, so parallax never shows a gap */
+  transform: translate3d(calc(-50% + var(--mx) * 18px), calc(var(--my) * 10px), 0);
+  will-change: transform;
   width: min(72vw, 1000px);
   min-height: 30vh;
   box-sizing: border-box;
-  padding: 8vh 4rem 5vh;
+  padding: 8vh 4rem calc(5vh + 24px);
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
-/* black that fades out toward the top, and softly toward the left and right sides */
 .session__dialog::before {
   content: '';
   position: absolute;
@@ -50,7 +63,6 @@
   mask-image: linear-gradient(to right, transparent, #000 14%, #000 86%, transparent);
 }
 
-/* the faint white haze fading down from the top edge */
 .session__dialog::after {
   content: '';
   position: absolute;
@@ -69,4 +81,207 @@
   line-height: 1.7;
   letter-spacing: 0.03em;
   text-shadow: 0 2px 8px rgba(0, 0, 0, 0.8);
+}
+
+.session__ghost {
+  visibility: hidden;
+}
+
+/* little arrow shown when the line is finished */
+.session__next {
+  position: absolute;
+  right: 18%;
+  bottom: calc(24px + 3vh);
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 0.9rem;
+  animation: session-bob 1.2s ease-in-out infinite;
+}
+
+@keyframes session-bob {
+  0%, 100% { transform: translateY(0);   opacity: 0.5; }
+  50%      { transform: translateY(4px); opacity: 1; }
+}
+
+/* ---------- menu (moves with the cursor) ---------- */
+.session__menu {
+  position: absolute;
+  top: 4%;
+  left: 3%;
+  z-index: 3;
+  transform: translate3d(calc(var(--mx) * 24px), calc(var(--my) * 14px), 0);
+  will-change: transform;
+}
+
+/* the three-line icon, turns into an X when open */
+.session__burger {
+  display: grid;
+  align-content: center;
+  gap: 6px;
+  width: 3rem;
+  height: 3rem;
+  padding: 0 0.7rem;
+  box-sizing: border-box;
+  background: none;
+  border: 0;
+  cursor: pointer;
+}
+
+.session__burger span {
+  display: block;
+  height: 2px;
+  border-radius: 2px;
+  background: #fff;
+  transition: transform 0.3s ease, opacity 0.2s;
+}
+
+.session__menu--open .session__burger span:nth-child(1) { transform: translateY(8px) rotate(45deg); }
+.session__menu--open .session__burger span:nth-child(2) { opacity: 0; }
+.session__menu--open .session__burger span:nth-child(3) { transform: translateY(-8px) rotate(-45deg); }
+
+.session__burger:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+.session__stack {
+  margin-top: 0.6rem;
+  display: grid;
+  gap: 0.5rem;
+  justify-items: start;
+}
+
+/* ---------- the stair bars ---------- */
+.session__bar {
+  --i: 0;                                          /* position in the stair, set in the JSX */
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  box-sizing: border-box;
+  width: min(24rem, 78vw);
+  height: var(--sbar-h);
+  margin-left: calc(var(--i) * var(--sbar-step));  /* each bar steps to the right */
+  padding: 0 1.6rem 0 calc(var(--sbar-h) * 0.9 + 0.6rem);
+  border: 0;
+  color: var(--sbar-text);
+  font: inherit;
+  font-size: clamp(0.95rem, 1.5vw, 1.3rem);
+  letter-spacing: 0.06em;
+  text-align: left;
+  background: var(--sbar-bg);
+  box-shadow: inset 0 1px 0 var(--sbar-line);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+  clip-path: polygon(0 0, 100% 0, 100% 100%, calc(var(--sbar-h) * 0.9) 100%);
+  cursor: pointer;
+
+  /* closed: waiting off screen at the left, leaves in reverse order */
+  transform: translate3d(calc(-100% - 12rem), 0, 0);
+  opacity: 0;
+  visibility: hidden;
+  transition:
+    transform 0.3s cubic-bezier(0.55, 0, 1, 0.45) calc((2 - var(--i)) * 0.07s),
+    opacity 0.2s linear calc((2 - var(--i)) * 0.07s),
+    background 0.2s,
+    visibility 0s linear 0.45s;
+}
+
+/* open: bars pop out one by one */
+.session__menu--open .session__bar {
+  transform: none;
+  opacity: 1;
+  visibility: visible;
+  transition:
+    transform 0.45s cubic-bezier(0.22, 1, 0.36, 1) calc(0.08s + var(--i) * 0.12s),
+    opacity 0.3s linear calc(0.08s + var(--i) * 0.12s),
+    background 0.2s,
+    visibility 0s;
+}
+
+.session__menu--open .session__bar:hover {
+  background: var(--sbar-bg-hover);
+}
+
+.session__bar:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: -4px;
+}
+
+.session__bar-label {
+  flex: none;
+}
+
+/* back: the circled arrow, same as the main menu's but white */
+.session__circle {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: calc(var(--sbar-h) * 0.56);
+  aspect-ratio: 1;
+  border: 2px solid currentColor;
+  border-radius: 50%;
+  transition: background 0.2s, color 0.2s;
+}
+
+.session__circle svg {
+  width: 50%;
+  height: 50%;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.session__bar:hover .session__circle {
+  background: #fff;
+  color: #111;
+}
+
+/* speed: x2 x3 x4 */
+.session__speeds {
+  margin-left: auto;
+  display: flex;
+  gap: 1.1rem;
+}
+
+.session__speed {
+  padding: 0.2rem 0.1rem;
+  background: none;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  color: inherit;
+  font: inherit;
+  letter-spacing: 0.04em;
+  opacity: 0.5;
+  cursor: pointer;
+  transition: opacity 0.2s, border-color 0.2s;
+}
+
+.session__speed:hover {
+  opacity: 0.85;
+}
+
+.session__speed--on {
+  opacity: 1;
+  border-bottom-color: #fff;
+}
+
+/* auto play: ON / OFF pill */
+.session__state {
+  margin-left: auto;
+  padding: 0.15rem 0.8rem;
+  border: 1.5px solid rgba(255, 255, 255, 0.4);
+  border-radius: 999px;
+  font-size: 0.8em;
+  letter-spacing: 0.12em;
+  opacity: 0.7;
+  transition: background 0.2s, color 0.2s, opacity 0.2s, border-color 0.2s;
+}
+
+.session__state--on {
+  background: #fff;
+  border-color: #fff;
+  color: #111;
+  opacity: 1;
 }
