@@ -47,3 +47,20 @@
   .scene { --bar-h: 8vh; }
   .scene__panel { left: 20%; }
 }
+
+.scene__title
+{
+  position: absolute;
+  top: 6%;
+  left: 4%;
+  margin: 0;
+  z-index: 2;
+  color: #1c2430;
+  font: inherit;
+  font-size: clamp(1.4rem, 3.2vw, 3rem);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-shadow: 0 2px 12px rgba(255, 255, 255, 0.6);
+  transform: translate3d(calc(var(--mx) * 28px), calc(var(--my) * 16px), 0);
+  will-change: transform;
+}
