@@ -11,11 +11,21 @@ const backgrounds = [
   '/resources/theresa4.jpg'
 ];
 
-// shown after pressing Start
-const startItems = [
-  { id: 'new-session', label: 'New Session' },
-  { id: 'deep-dive', label: 'Deep Dive' },
-];
+// each key is the id of a main menu item, the list is what its bar shows
+const subMenus = {
+  start: [
+    { id: 'new-session', label: 'New Session' },
+    { id: 'deep-dive', label: 'Deep Dive' },
+  ],
+  load: [
+    { id: 'load-session', label: 'Load Session' },
+    { id: 'load-dive', label: 'Load Dive' },
+  ],
+  menu: [
+    { id: 'volume', label: 'Volume' },
+    { id: 'show-hints', label: 'Show Hints'},
+  ],
+};
 
 const BGM_VOLUME = 0.6;
 const BGM_FADE_IN_MS = 2000;
@@ -33,13 +43,13 @@ function fadeVolume(audio, from, to, ms) {
 
 export default function App() {
   const [introDone, setIntroDone] = useState(false);
-  const [view, setView] = useState('main');          // 'main' or 'start'
+  const [view, setView] = useState('main');          // 'main', 'start' or 'load'
   const [nextView, setNextView] = useState(null);    // where the bar is heading
   const [barHidden, setBarHidden] = useState(false);
   const sfxRef = useRef(null);
   const bgmRef = useRef(null);
 
-  const items = view === 'start' ? startItems : menuItems;
+  const items = subMenus[view] ?? menuItems;
 
   // slide the bar out, then show the other menu
   const goTo = (target) => {
@@ -49,8 +59,8 @@ export default function App() {
   };
 
   const handleSelect = (id) => {
-    if (id === 'start') {
-      goTo('start');
+    if (subMenus[id]) {              // Start and Load open their sub menus
+      goTo(id);
       return;
     }
     console.log('Selected:', id);
@@ -93,7 +103,7 @@ export default function App() {
         <MainMenu
           items={items}
           onSelect={handleSelect}
-          onBack={view === 'start' ? () => goTo('main') : undefined}
+          onBack={view !== 'main' ? () => goTo('main') : undefined}
         />
       </ParallaxScene>
 
