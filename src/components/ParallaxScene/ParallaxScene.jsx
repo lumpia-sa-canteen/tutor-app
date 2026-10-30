@@ -6,9 +6,18 @@ export default function ParallaxScene({
   images,
   running = true,
   title = 'Civilight-Eterna',
+  barHidden = false,      // true slides the white bar off to the right
+  onBarHidden,            // called once the bar has fully slid out
   children,
 }) {
   const ref = useParallax();
+
+  const handleBarTransitionEnd = (e) => {
+    // only the bar's own slide, and only when it just slid out
+    if (e.target === e.currentTarget && e.propertyName === 'transform' && barHidden) {
+      onBarHidden?.();
+    }
+  };
 
   return (
     <main ref={ref} className="scene">
@@ -19,7 +28,12 @@ export default function ParallaxScene({
       <h1 className="scene__title">{title}</h1>
 
       <div className="scene__panel">
-        <div className="scene__bar">{children}</div>
+        <div
+          className={`scene__bar ${barHidden ? 'scene__bar--out' : ''}`}
+          onTransitionEnd={handleBarTransitionEnd}
+        >
+          {children}
+        </div>
       </div>
     </main>
   );

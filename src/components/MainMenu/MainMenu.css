@@ -15,7 +15,7 @@
 }
 
 .menu__item {
-  flex: 1 1 0;
+  flex: 0 1 calc(100% / var(--slots, 4));
   display: flex;
   height: 60%;
 }
@@ -61,4 +61,55 @@
 .menu__button:focus-visible {
   outline: 2px solid #1c2430;
   outline-offset: -2px;
+}
+
+.menu__back
+{
+  position: absolute;
+  right: calc(80px + 40px + 2rem);
+  top: 50%;
+  translate: 0 -50%;
+  width: calc(var(--bar-h) * 0.5);
+  aspect-ratio: 1;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  background: none;
+  border: 2px solid #1c2430;
+  border-radius: 50%;
+  color: #1c2430;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s, transform 0.25s ease;
+}
+
+.menu__back svg 
+{
+  width: 50%;
+  height: 50%;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transition: transform 0.25s ease;
+}
+
+.menu__back:hover,
+.menu__back:focus-visible
+{
+  background: #1c2430;
+  color: #fff;
+  transform: scale(1.08);
+}
+
+.menu__back:hover svg,
+.menu__back:focus-visible svg 
+{
+  transform: translateX(2px);
+}
+
+.menu__back:focus-visible
+{
+  outline: 2px solid #1c2430;
+  outline-offset: 3px;
 }
