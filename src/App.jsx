@@ -7,10 +7,9 @@ import SessionScreen from './components/SessionScreen/SessionScreen';
 import { menuItems } from './data/menuItems';
 
 const backgrounds = [
-  '/resources/theresa1.jpg',
-  '/resources/theresa2.jpg',
-  '/resources/theresa3.jpg',
-  '/resources/theresa4.jpg'
+  '/resources/priestess1.jpg',
+  '/resources/priestess2.jpg',
+  '/resources/priestess3.jpg',
 ];
 
 // each key is the id of a main menu item, the list is what its bar shows

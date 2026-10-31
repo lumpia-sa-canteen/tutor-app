@@ -5,7 +5,7 @@ import './ParallaxScene.css';
 export default function ParallaxScene({
   images,
   running = true,
-  title = 'Civilight-Eterna',
+  title = 'PRTS',
   barHidden = false,        // true slides the white bar off to the right
   onBarHidden,              // called once the bar has fully slid out
   extraBar = null,          // optional second bar stacked above the main one

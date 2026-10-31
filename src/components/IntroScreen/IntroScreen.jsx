@@ -52,7 +52,7 @@ export default function IntroScreen({ audioRef, onStart, onDone }) {
       className={`intro ${started ? 'intro--started' : ''}`}
       onClick={handleStart}
     >
-      <p className="intro__hint">Dive to DWDB-221E</p>
+      <p className="intro__hint">Enter the Abyss</p>
     </div>
   );
 }
