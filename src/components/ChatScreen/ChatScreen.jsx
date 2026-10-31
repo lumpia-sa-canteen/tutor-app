@@ -13,6 +13,7 @@ export default function ChatScreen({
   const ref = useParallax();
   const listRef = useRef(null);
   const idRef = useRef(1);                       // next message id
+  const hopTimer = useRef(null);                 // timer for the "file created" hop
   const [menuOpen, setMenuOpen] = useState(false);
   const [messages, setMessages] = useState(() => [
     {
@@ -24,12 +25,16 @@ export default function ChatScreen({
   const [draft, setDraft] = useState('');
   const [waiting, setWaiting] = useState(false);   // true while the bot is "typing"
   const [connected, setConnected] = useState(false);
+  const [creating, setCreating] = useState(false); // true while the file icon hops
 
   // keep the newest message in view
   useEffect(() => {
     const el = listRef.current;
     if (el) el.scrollTop = el.scrollHeight;
   }, [messages, waiting]);
+
+  // clear the hop timer when leaving the screen
+  useEffect(() => () => clearTimeout(hopTimer.current), []);
 
   // clicking anywhere outside the menu closes it
   const handleScreenClick = (e) => {
@@ -48,6 +53,14 @@ export default function ChatScreen({
 
     try {
       const reply = await getReply(next);
+
+      // the reply contains a file: make the icon hop near her head
+      if (reply.includes('```')) {
+        setCreating(true);
+        clearTimeout(hopTimer.current);
+        hopTimer.current = setTimeout(() => setCreating(false), 2600);
+      }
+
       setConnected(true);
       setMessages((m) => [...m, { id: idRef.current++, role: 'bot', text: reply }]);
     } catch {
@@ -65,6 +78,16 @@ export default function ChatScreen({
       {/* character: fades in on the left */}
       <div className="chat__character">
         <img src={character} alt="" draggable="false" />
+
+        {/* file icon that hops near the head while a file is created */}
+        <div className={`chat__hop ${creating ? 'chat__hop--on' : ''}`} aria-hidden="true">
+          <svg viewBox="0 0 24 24">
+            <path d="M7 3h7l5 5v13H7z" />
+            <path d="M14 3v5h5" />
+            <line x1="10" y1="13" x2="16" y2="13" />
+            <line x1="10" y1="17" x2="16" y2="17" />
+          </svg>
+        </div>
       </div>
 
       {/* chat box: slides in from the right */}
@@ -76,7 +99,7 @@ export default function ChatScreen({
               {codename && <p className="chat__sub">Codename: {codename}</p>}
             </div>
             <span className="chat__status">
-              {connected ? 'Connected to DWDB-221E' : 'Cant Connect to the neural network'}
+              {connected ? 'Connected to DWDB-221E' : 'Cant connect to the neural network'}
             </span>
           </header>
 
