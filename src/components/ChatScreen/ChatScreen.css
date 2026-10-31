@@ -132,6 +132,7 @@
   letter-spacing: 0.1em;
   text-transform: uppercase;
   opacity: 0.7;
+  white-space: nowrap;
 }
 
 /* ---------- messages ---------- */
@@ -284,4 +285,51 @@
     bottom: 3%;
     width: 90vw;
   }
+}
+
+/* ---------- code blocks and download buttons ---------- */
+.chat__text {
+  white-space: pre-wrap;
+}
+
+.chat__code {
+  margin: 0.6rem 0;
+  border-radius: 0.5rem;
+  background: rgba(0, 0, 0, 0.45);
+  overflow: hidden;
+}
+
+.chat__code pre {
+  margin: 0;
+  padding: 0.8rem 1rem;
+  overflow-x: auto;
+  font-family: Consolas, 'Courier New', monospace;
+  font-size: 0.85rem;
+  line-height: 1.5;
+  letter-spacing: 0;
+}
+
+.chat__download {
+  display: block;
+  width: 100%;
+  padding: 0.45rem;
+  background: rgba(255, 255, 255, 0.12);
+  border: 0;
+  border-top: 1px solid var(--chat-line);
+  color: inherit;
+  font: inherit;
+  font-size: 0.8rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.chat__download:hover {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+/* optional: keeps the longer status text on one line */
+.chat__status {
+  white-space: nowrap;
 }

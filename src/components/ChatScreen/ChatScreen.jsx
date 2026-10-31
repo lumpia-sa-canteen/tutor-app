@@ -1,12 +1,13 @@
 import { useEffect, useRef, useState } from 'react';
 import useParallax from '../../hooks/useParallax';
 import { getReply } from './getReply';
+import { splitReply, extFor, saveBlock } from './downloadFile';
 import './ChatScreen.css';
 
 export default function ChatScreen({
   character = '/resources/Civilight_Eterna.png',
   codename = '',
-  botName = 'Assistant',
+  botName = 'Civilight-Eterna',
   onHome,                                        // called when the Home bar is pressed
 }) {
   const ref = useParallax();
@@ -22,6 +23,7 @@ export default function ChatScreen({
   ]);
   const [draft, setDraft] = useState('');
   const [waiting, setWaiting] = useState(false);   // true while the bot is "typing"
+  const [connected, setConnected] = useState(false);
 
   // keep the newest message in view
   useEffect(() => {
@@ -46,6 +48,7 @@ export default function ChatScreen({
 
     try {
       const reply = await getReply(next);
+      setConnected(true);
       setMessages((m) => [...m, { id: idRef.current++, role: 'bot', text: reply }]);
     } catch {
       setMessages((m) => [
@@ -72,13 +75,32 @@ export default function ChatScreen({
               <h2 className="chat__title">{botName}</h2>
               {codename && <p className="chat__sub">Codename: {codename}</p>}
             </div>
-            <span className="chat__status">AI not connected</span>
+            <span className="chat__status">
+              {connected ? 'Connected to DWDB-221E' : 'Cant Connect to the neural network'}
+            </span>
           </header>
 
           <ul className="chat__list" ref={listRef}>
             {messages.map((m) => (
               <li key={m.id} className={`chat__msg chat__msg--${m.role}`}>
-                <p className="chat__bubble">{m.text}</p>
+                <div className="chat__bubble">
+                  {splitReply(m.text).map((part, i) =>
+                    part.type === 'code' ? (
+                      <div key={i} className="chat__code">
+                        <pre><code>{part.content}</code></pre>
+                        <button
+                          type="button"
+                          className="chat__download"
+                          onClick={() => saveBlock(part.lang, part.content)}
+                        >
+                          Download .{extFor(part.lang)}
+                        </button>
+                      </div>
+                    ) : (
+                      <span key={i} className="chat__text">{part.content}</span>
+                    )
+                  )}
+                </div>
               </li>
             ))}
 
