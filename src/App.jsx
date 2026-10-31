@@ -4,6 +4,8 @@ import MainMenu from './components/MainMenu/MainMenu';
 import VolumeControl, { VolumeSlider } from './components/VolumeControl/VolumeControl';
 import IntroScreen from './components/IntroScreen/IntroScreen';
 import SessionScreen from './components/SessionScreen/SessionScreen';
+import ChatScreen from './components/ChatScreen/ChatScreen';
+import Shutters from './components/Shutters/Shutters';
 import { menuItems } from './data/menuItems';
 
 const backgrounds = [
@@ -47,6 +49,7 @@ const sessionLines = [
   'Can you tell me your name doctor?',
 ];
 
+const CHARACTER_SRC = '/resources/Civilight_Eterna.png';   // used by the session and chat screens
 const CLICK_SFX_SRC = '/resources/sfx1.mp3';
 const BGM_FADE_IN_MS = 2000;
 const EXIT_FADE_MS = 2500;   // black screen and music fade out together
@@ -55,8 +58,12 @@ const EXIT_FADE_MS = 2500;   // black screen and music fade out together
 const MENU_FADE_OUT_MS = 5000;    // menu fades to black while its music fades out
 const SESSION_FADE_IN_MS = 5000;  // session screen fades in while its music fades in
 
-// Back to menu transition
+// Back to menu transition (from the session screen)
 const RETURN_FADE_MS = 2500;      // fade length each way (to black, then back in)
+
+// Home transition (from the chat screen)
+const HOME_FADE_OUT_MS = 5000;    // chat fades to black while its music fades out
+const HOME_FADE_IN_MS = 5000;     // main menu fades in while its music fades in
 
 // smooth = true uses an ease-in-out curve so it matches the screen fade
 function fadeVolume(audio, from, to, ms, smooth = false) {
@@ -73,23 +80,22 @@ function fadeVolume(audio, from, to, ms, smooth = false) {
 
 export default function App() {
   const [introDone, setIntroDone] = useState(false);
-  const [screen, setScreen] = useState('menu');      // 'menu' or 'session'
+  const [screen, setScreen] = useState('menu');      // 'menu', 'session' or 'chat'
   const [view, setView] = useState('main');          // 'main', 'start', 'load', 'menu' or 'volume'
   const [nextView, setNextView] = useState(null);    // where the bar is heading
   const [barHidden, setBarHidden] = useState(false);
   const [curtain, setCurtain] = useState(false);     // black overlay for screen changes
   const [curtainMs, setCurtainMs] = useState(MENU_FADE_OUT_MS);   // fade length of the curtain
+  const [shutter, setShutter] = useState(false);     // top and bottom panels closing
   const [exiting, setExiting] = useState(false);
   const [volume, setVolume] = useState(60);          // music, 0 to 100
   const [sfxVolume, setSfxVolume] = useState(80);    // button sounds, 0 to 100
-  // the player's confirmed codename, kept here for the next step of the story
-  // eslint-disable-next-line no-unused-vars
-  const [codename, setCodename] = useState('');
+  const [codename, setCodename] = useState('');      // kept in memory only, no database yet
   const sfxVolumeRef = useRef(0.8);                  // lets playClick read the latest level
   const busyRef = useRef(false);                     // true while a screen change runs
   const sfxRef = useRef(null);                       // the intro sound
   const bgmRef = useRef(null);                       // menu music
-  const sessionBgmRef = useRef(null);                // New Session music
+  const sessionBgmRef = useRef(null);                // session and chat music
 
   const items = subMenus[view] ?? menuItems;
 
@@ -158,19 +164,21 @@ export default function App() {
     }, MENU_FADE_OUT_MS);
   };
 
-  // session screen -> main menu (the Back bar)
-  const returnToMenu = () => {
+  // session or chat screen -> main menu:
+  // the screen fades to black while the music fades out (outMs),
+  // then the menu fades in while the menu music fades in (inMs)
+  const fadeToMenu = (outMs, inMs) => {
     if (busyRef.current) return;
     busyRef.current = true;
 
-    // 1. the session screen fades to black while its music fades out
+    // 1. fade to black, music fades out, same duration
     const sessionBgm = sessionBgmRef.current;
-    setCurtainMs(RETURN_FADE_MS);
+    setCurtainMs(outMs);
     setCurtain(true);
-    fadeVolume(sessionBgm, sessionBgm.volume, 0, RETURN_FADE_MS, true);
+    fadeVolume(sessionBgm, sessionBgm.volume, 0, outMs, true);
 
     setTimeout(() => {
-      // 2. black and silent: swap back to the menu
+      // 2. black and silent: swap to the menu
       sessionBgm.pause();
       setScreen('menu');
       setView('main');
@@ -180,13 +188,31 @@ export default function App() {
       bgm.currentTime = 0;
       bgm.volume = 0;
       bgm.play().catch(() => {});
-      fadeVolume(bgm, 0, volume / 100, RETURN_FADE_MS, true);
+      fadeVolume(bgm, 0, volume / 100, inMs, true);
+      setCurtainMs(inMs);
       setCurtain(false);
 
       setTimeout(() => {
         busyRef.current = false;
-      }, RETURN_FADE_MS);
-    }, RETURN_FADE_MS);
+      }, inMs);
+    }, outMs);
+  };
+
+  const returnToMenu = () => fadeToMenu(RETURN_FADE_MS, RETURN_FADE_MS);   // session screen's Back bar
+  const goHome = () => fadeToMenu(HOME_FADE_OUT_MS, HOME_FADE_IN_MS);      // chat screen's Home bar
+
+  // codename confirmed: close the top and bottom panels, then go to the chat screen
+  const handleCodename = (name) => {
+    setCodename(name);
+    busyRef.current = true;          // ignore everything else while it closes
+    setShutter(true);
+  };
+
+  // called when the two panels have met in the middle
+  const handleShuttersClosed = () => {
+    setScreen('chat');               // the chat screen starts black, so there is no visible jump
+    setShutter(false);
+    busyRef.current = false;
   };
 
   const handleExit = () => {
@@ -255,7 +281,7 @@ export default function App() {
       <audio ref={bgmRef} src="/resources/main_menu_bgm.mp3" preload="auto" loop />
       <audio ref={sessionBgmRef} src="/resources/session_screen_bgm1.mp3" preload="auto" loop />
 
-      {screen === 'menu' ? (
+      {screen === 'menu' && (
         <ParallaxScene
           images={backgrounds}
           running={introDone}
@@ -285,14 +311,23 @@ export default function App() {
             />
           )}
         </ParallaxScene>
-      ) : (
+      )}
+
+      {screen === 'session' && (
         <SessionScreen
-          character="/resources/Civilight_Eterna.png"
+          character={CHARACTER_SRC}
           lines={sessionLines}
           onBack={returnToMenu}
-          onCodename={setCodename}
+          onCodename={handleCodename}
         />
       )}
+
+      {screen === 'chat' && (
+        <ChatScreen character={CHARACTER_SRC} codename={codename} onHome={goHome} />
+      )}
+
+      {/* top and bottom panels closing after the codename is confirmed */}
+      {shutter && <Shutters onClosed={handleShuttersClosed} />}
 
       {!introDone && (
         <IntroScreen

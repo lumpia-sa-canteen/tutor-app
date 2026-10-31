@@ -1,0 +1,41 @@
+.shutters {
+  position: fixed;
+  inset: 0;
+  z-index: 9400;
+  overflow: hidden;
+  pointer-events: auto;              /* blocks clicks while it closes */
+}
+
+.shutters__panel {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: calc(50% + 1px);           /* tiny overlap so no thin line shows in the middle */
+  background: #000;
+  will-change: transform;
+
+  animation-duration: 1.6s;          /* how long the closing takes */
+  animation-delay: 0.3s;             /* short pause so the codename box starts fading first */
+  animation-timing-function: cubic-bezier(0.65, 0, 0.35, 1);
+  animation-fill-mode: both;
+}
+
+.shutters__panel--top {
+  top: 0;
+  animation-name: shutter-top;
+}
+
+.shutters__panel--bottom {
+  bottom: 0;
+  animation-name: shutter-bottom;
+}
+
+@keyframes shutter-top {
+  from { transform: translateY(-100%); }
+  to   { transform: translateY(0); }
+}
+
+@keyframes shutter-bottom {
+  from { transform: translateY(100%); }
+  to   { transform: translateY(0); }
+}
