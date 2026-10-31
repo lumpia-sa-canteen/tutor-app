@@ -4,6 +4,8 @@ import { getReply } from './getReply';
 import { splitReply, extFor, saveBlock } from './downloadFile';
 import './ChatScreen.css';
 
+const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+
 export default function ChatScreen({
   character = '/resources/Civilight_Eterna.png',
   codename = '',
@@ -13,7 +15,6 @@ export default function ChatScreen({
   const ref = useParallax();
   const listRef = useRef(null);
   const idRef = useRef(1);                       // next message id
-  const hopTimer = useRef(null);                 // timer for the "file created" hop
   const [menuOpen, setMenuOpen] = useState(false);
   const [messages, setMessages] = useState(() => [
     {
@@ -25,7 +26,7 @@ export default function ChatScreen({
   const [draft, setDraft] = useState('');
   const [waiting, setWaiting] = useState(false);   // true while the bot is "typing"
   const [connected, setConnected] = useState(false);
-  const [creating, setCreating] = useState(false); // true while the file icon hops
+  const [pending, setPending] = useState([]);      // created files not downloaded yet
 
   // keep the newest message in view
   useEffect(() => {
@@ -33,12 +34,25 @@ export default function ChatScreen({
     if (el) el.scrollTop = el.scrollHeight;
   }, [messages, waiting]);
 
-  // clear the hop timer when leaving the screen
-  useEffect(() => () => clearTimeout(hopTimer.current), []);
-
   // clicking anywhere outside the menu closes it
   const handleScreenClick = (e) => {
     if (menuOpen && !e.target.closest('.session__menu')) setMenuOpen(false);
+  };
+
+  // clicking the hopping icon downloads every waiting file, then the icon goes away
+  const handleHopClick = async () => {
+    const files = pending;
+    setPending([]);
+    for (const f of files) {
+      await saveBlock(f.lang, f.content);
+      await wait(300);                           // small gap so the browser allows several downloads
+    }
+  };
+
+  // clicking a Download button inside the chat also clears that file from the waiting list
+  const handleBubbleDownload = (part) => {
+    saveBlock(part.lang, part.content);
+    setPending((p) => p.filter((f) => f.content !== part.content));
   };
 
   const handleSend = async (e) => {
@@ -54,12 +68,11 @@ export default function ChatScreen({
     try {
       const reply = await getReply(next);
 
-      // the reply contains a file: make the icon hop near her head
-      if (reply.includes('```')) {
-        setCreating(true);
-        clearTimeout(hopTimer.current);
-        hopTimer.current = setTimeout(() => setCreating(false), 2600);
-      }
+      // the reply contains file(s): the icon hops until they are downloaded
+      const files = splitReply(reply)
+        .filter((p) => p.type === 'code')
+        .map((p) => ({ lang: p.lang, content: p.content }));
+      if (files.length) setPending(files);
 
       setConnected(true);
       setMessages((m) => [...m, { id: idRef.current++, role: 'bot', text: reply }]);
@@ -79,15 +92,22 @@ export default function ChatScreen({
       <div className="chat__character">
         <img src={character} alt="" draggable="false" />
 
-        {/* file icon that hops near the head while a file is created */}
-        <div className={`chat__hop ${creating ? 'chat__hop--on' : ''}`} aria-hidden="true">
-          <svg viewBox="0 0 24 24">
+        {/* file icon: hops near the head until it is clicked */}
+        <button
+          type="button"
+          className={`chat__hop ${pending.length ? 'chat__hop--on' : ''}`}
+          onClick={handleHopClick}
+          aria-label="Download the created file"
+          tabIndex={pending.length ? 0 : -1}
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true">
             <path d="M7 3h7l5 5v13H7z" />
             <path d="M14 3v5h5" />
             <line x1="10" y1="13" x2="16" y2="13" />
             <line x1="10" y1="17" x2="16" y2="17" />
           </svg>
-        </div>
+          {pending.length > 1 && <span className="chat__hop-count">{pending.length}</span>}
+        </button>
       </div>
 
       {/* chat box: slides in from the right */}
@@ -114,7 +134,7 @@ export default function ChatScreen({
                         <button
                           type="button"
                           className="chat__download"
-                          onClick={() => saveBlock(part.lang, part.content)}
+                          onClick={() => handleBubbleDownload(part)}
                         >
                           Download .{extFor(part.lang)}
                         </button>
