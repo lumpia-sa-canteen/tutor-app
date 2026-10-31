@@ -1,6 +1,10 @@
 .session {
-  --mx: --char-h: 175%;
-  --my: --char-top: 3%;
+  --mx: 0;
+  --my: 0;
+
+  /* character framing: shows the upper half like a visual novel */
+  --char-h: 175%;   /* bigger = zoomed in, shows less of the body */
+  --char-top: 3%;   /* smaller = character sits higher on the screen */
 
   /* menu bars: change --sbar-bg to try the other colors */
   --sbar-h: clamp(2.8rem, 6.5vh, 3.8rem);
@@ -25,7 +29,7 @@
   left: 50%;
   top: var(--char-top);
   height: var(--char-h);
-  max-width: none;
+  max-width: none;               /* stops a global img rule from shrinking it */
   transform: translate3d(calc(-50% + var(--mx) * -14px), calc(var(--my) * -8px), 0);
   will-change: transform;
   object-fit: contain;
@@ -101,6 +105,27 @@
 @keyframes session-bob {
   0%, 100% { transform: translateY(0);   opacity: 0.5; }
   50%      { transform: translateY(4px); opacity: 1; }
+}
+
+/* ---------- blur layer: above the character and dialog, below the menu ---------- */
+.session__blur {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;            /* clicks pass through, so clicking outside still closes the menu */
+  background: rgba(0, 0, 0, 0);
+  -webkit-backdrop-filter: blur(0px);
+  backdrop-filter: blur(0px);
+  transition:
+    backdrop-filter 0.4s ease,
+    -webkit-backdrop-filter 0.4s ease,
+    background 0.4s ease;
+}
+
+.session__blur--on {
+  background: rgba(0, 0, 0, 0.3);  /* slight dimming so the bars stand out more */
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
 }
 
 /* ---------- menu (moves with the cursor) ---------- */
@@ -293,21 +318,165 @@
   opacity: 1;
 }
 
-.session__blur
-{
-    position: absolute;
-    inset: 0;
-    z-index: 2;
-    pointer-events: none;
-    background: rgba(0, 0, 0, 0);
-    -webkit-backdrop-filter: blur(0px);
-    backdrop-filter: blur(0px);
-    transition: backdrop-filter 0.4s ease, -webkit-backdrop-filter 0.4s ease, background 0.4s ease;
+/* ---------- codename box ---------- */
+.codename {
+  position: absolute;
+  inset: 0;
+  z-index: 5;                          /* above the menu, so everything behind gets blurred */
+  display: grid;
+  place-items: center;
+  background: rgba(0, 0, 0, 0.45);
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
+  /* --cd is the pause before it appears: 0.5s the first time, 0s when reopened */
+  animation: codename-in 0.6s ease var(--cd, 0.5s) both;
 }
 
-.session__blur--on
-{
-    background: rgba(0, 0, 0, 0);
-    -webkit-backdrop-filter: blur(10px);
-    backdrop-filter: blur(10px);
+.codename--out {
+  pointer-events: none;
+  animation: codename-out 0.5s ease forwards;
+}
+
+@keyframes codename-in  { from { opacity: 0; } to { opacity: 1; } }
+@keyframes codename-out { from { opacity: 1; } to { opacity: 0; } }
+
+/* parallax: the whole box follows the cursor... */
+.codename__panel {
+  position: relative;
+  transform: translate3d(calc(var(--mx) * 18px), calc(var(--my) * 12px), 0);
+  will-change: transform;
+}
+
+/* ...and a soft glow behind it moves the opposite way, for depth */
+.codename__panel::before {
+  content: '';
+  position: absolute;
+  inset: -2.5rem;
+  background: radial-gradient(closest-side, rgba(201, 208, 218, 0.18), rgba(201, 208, 218, 0));
+  transform: translate3d(calc(var(--mx) * -22px), calc(var(--my) * -14px), 0);
+  pointer-events: none;
+}
+
+.codename__box {
+  position: relative;
+  width: min(30rem, 88vw);
+  box-sizing: border-box;
+  padding: 2.2rem 2.4rem 2rem 3.4rem;   /* extra on the left for the slanted corner */
+  color: #fff;
+  background: rgba(24, 27, 34, 0.78);
+  box-shadow: inset 0 1px 0 var(--sbar-line);
+  clip-path: polygon(0 0, 100% 0, 100% 100%, 2.6rem 100%);   /* same slant as the menu bars */
+  animation: codename-pop 0.6s cubic-bezier(0.22, 1, 0.36, 1) var(--cd, 0.5s) both;
+}
+
+@keyframes codename-pop {
+  from { transform: translateY(14px) scale(0.97); }
+  to   { transform: none; }
+}
+
+.codename__step {
+  display: grid;
+  gap: 1.1rem;
+  justify-items: start;
+}
+
+.codename__title {
+  margin: 0;
+  font: inherit;
+  font-size: clamp(1rem, 1.7vw, 1.35rem);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.codename__title--warn {
+  letter-spacing: 0.08em;
+  line-height: 1.5;
+}
+
+.codename__input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0.5rem 0.1rem;
+  background: none;
+  border: 0;
+  border-bottom: 2px solid rgba(255, 255, 255, 0.5);
+  color: #fff;
+  font: inherit;
+  font-size: clamp(1.2rem, 2.2vw, 1.8rem);
+  letter-spacing: 0.08em;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.codename__input::placeholder {
+  color: rgba(255, 255, 255, 0.3);
+}
+
+.codename__input:focus {
+  border-bottom-color: #fff;
+}
+
+.codename__input[aria-invalid='true'] {
+  border-bottom-color: #ff8a80;
+}
+
+.codename__hint {
+  margin: 0;
+  min-height: 2.6em;                    /* keeps the box from jumping when an error shows */
+  font-size: 0.85rem;
+  line-height: 1.5;
+  letter-spacing: 0.03em;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.codename__hint--error {
+  color: #ff9e94;
+}
+
+.codename__name {
+  margin: 0;
+  font-size: clamp(1.5rem, 3vw, 2.3rem);
+  letter-spacing: 0.1em;
+}
+
+.codename__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.codename__ok,
+.codename__btn {
+  min-width: 7rem;
+  padding: 0.6rem 1.6rem;
+  background: #fff;
+  color: #111;
+  border: 1.5px solid #fff;
+  border-radius: 999px;
+  font: inherit;
+  font-size: 1rem;
+  letter-spacing: 0.14em;
+  cursor: pointer;
+  transition: transform 0.2s, background 0.2s, color 0.2s;
+}
+
+.codename__ok:hover,
+.codename__btn:hover {
+  transform: translateY(-2px);
+}
+
+.codename__btn--ghost {
+  background: transparent;
+  color: #fff;
+  border-color: rgba(255, 255, 255, 0.5);
+}
+
+.codename__btn--ghost:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.codename__ok:focus-visible,
+.codename__btn:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 3px;
 }

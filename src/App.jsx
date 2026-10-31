@@ -10,7 +10,7 @@ const backgrounds = [
   '/resources/theresa1.jpg',
   '/resources/theresa2.jpg',
   '/resources/theresa3.jpg',
-  '/resources/theresa4.jpg',
+  '/resources/theresa4.jpg'
 ];
 
 // each key is the id of a main menu item, the list is what its bar shows
@@ -37,12 +37,14 @@ const backTarget = {
   volume: 'menu',
 };
 
-// the dialogue shown on the session screen, one entry per click   // changed
+// the dialogue shown on the session screen, one entry per click.
+// The codename box opens after the LAST line, so keep the name question last.
 const sessionLines = [
-  'Welcome back. Shall we begin?',
-  'Take your time. There is no rush here.',
-  'Whenever you are ready, tell me what you would like to work on today.',
+  'Doctor, welcome to DWDB.',
+  'As you can see, you have no memories of everything.',
+  'But, rest assured i will help you regain everything.',
   'I will be right here with you.',
+  'Can you tell me your name doctor?',
 ];
 
 const CLICK_SFX_SRC = '/resources/sfx1.mp3';
@@ -53,7 +55,7 @@ const EXIT_FADE_MS = 2500;   // black screen and music fade out together
 const MENU_FADE_OUT_MS = 5000;    // menu fades to black while its music fades out
 const SESSION_FADE_IN_MS = 5000;  // session screen fades in while its music fades in
 
-// Back to menu transition                                          // changed
+// Back to menu transition
 const RETURN_FADE_MS = 2500;      // fade length each way (to black, then back in)
 
 // smooth = true uses an ease-in-out curve so it matches the screen fade
@@ -80,6 +82,9 @@ export default function App() {
   const [exiting, setExiting] = useState(false);
   const [volume, setVolume] = useState(60);          // music, 0 to 100
   const [sfxVolume, setSfxVolume] = useState(80);    // button sounds, 0 to 100
+  // the player's confirmed codename, kept here for the next step of the story
+  // eslint-disable-next-line no-unused-vars
+  const [codename, setCodename] = useState('');
   const sfxVolumeRef = useRef(0.8);                  // lets playClick read the latest level
   const busyRef = useRef(false);                     // true while a screen change runs
   const sfxRef = useRef(null);                       // the intro sound
@@ -153,7 +158,7 @@ export default function App() {
     }, MENU_FADE_OUT_MS);
   };
 
-  // session screen -> main menu (the Back bar)                      // changed
+  // session screen -> main menu (the Back bar)
   const returnToMenu = () => {
     if (busyRef.current) return;
     busyRef.current = true;
@@ -285,6 +290,7 @@ export default function App() {
           character="/resources/Civilight_Eterna.png"
           lines={sessionLines}
           onBack={returnToMenu}
+          onCodename={setCodename}
         />
       )}
 
