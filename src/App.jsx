@@ -14,13 +14,6 @@ import { loadSession, sessionExists } from './data/sessionApi';
 import { getTutor, rememberTutor, getSavedTutorId } from './data/tutors';
 import { loadScale, saveScale } from './data/uiScale';
 
-const backgrounds = [
-  '/resources/theresa1.jpg',
-  '/resources/theresa2.jpg',
-  '/resources/theresa3.jpg',
-  '/resources/theresa4.jpg'
-];
-
 // each key is the id of a main menu item, the list is what its bar shows
 const subMenus = {
   start: [
@@ -50,6 +43,7 @@ const backTarget = {
 // (the session screen's dialogue now comes from the chosen tutor, see data/tutors.js)
 
 const CLICK_SFX_SRC = '/resources/sfx1.mp3';
+const MENU_VIDEO_SRC = '/resources/take.mp4';
 const BGM_FADE_IN_MS = 2000;
 const EXIT_FADE_MS = 2500;   // black screen and music fade out together
 
@@ -109,7 +103,7 @@ export default function App() {
   const sfxVolumeRef = useRef(0.8);                  // lets playClick read the latest level
   const busyRef = useRef(false);                     // true while a screen change runs
   const sfxRef = useRef(null);                       // the intro sound
-  const bgmRef = useRef(null);                       // menu music
+  const bgmRef = useRef(null);                       // menu video, its audio is the menu music
   const sessionBgmRef = useRef(null);                // session and chat music
 
   const items = subMenus[view] ?? menuItems;
@@ -140,7 +134,7 @@ export default function App() {
 
   const handleVolumeChange = (v) => {
     setVolume(v);
-    bgmRef.current.volume = v / 100;   // applies to the music right away
+    bgmRef.current.volume = v / 100;   // applies to the menu video's audio right away
   };
 
   const handleSfxChange = (v) => {
@@ -155,14 +149,14 @@ export default function App() {
   };
 
   // menu -> session or chat screen:
-  // the menu fades to black while the menu music fades out (outMs),
+  // the menu video fades to black while its audio fades out (outMs),
   // then the new screen fades in while its music fades in (inMs).
   // returns false if another screen change is already running
   const fadeFromMenu = (target, outMs, inMs) => {
     if (busyRef.current) return false;
     busyRef.current = true;
 
-    // 1. the menu fades to black while the menu music fades out, same duration
+    // 1. the menu fades to black while the menu audio fades out, same duration
     const bgm = bgmRef.current;
     setCurtainMs(outMs);
     setCurtain(true);
@@ -207,7 +201,7 @@ export default function App() {
 
   // session or chat screen -> main menu:
   // the screen fades to black while the music fades out (outMs),
-  // then the menu fades in while the menu music fades in (inMs)
+  // then the menu fades in while the menu video's audio fades in (inMs)
   const fadeToMenu = (outMs, inMs) => {
     if (busyRef.current) return;
     busyRef.current = true;
@@ -224,7 +218,7 @@ export default function App() {
       setScreen('menu');
       setView('main');
 
-      // 3. the menu fades in while the menu music fades in
+      // 3. the menu fades in while its audio fades in
       const bgm = bgmRef.current;
       bgm.currentTime = 0;
       bgm.volume = 0;
@@ -392,12 +386,32 @@ export default function App() {
     // everything lives inside this box, which is resized by the Scale setting (see index.css)
     <div className="ui-scale" style={{ '--ui-scale': uiScale / 100 }}>
       <audio ref={sfxRef} src="/resources/okaeri_sfx.mp3" preload="auto" />
-      <audio ref={bgmRef} src="/resources/main_menu_bgm.mp3" preload="auto" loop />
+
+      {/* menu background video: its audio is the menu music. Stays mounted so the ref works. */}
+      <video
+        ref={bgmRef}
+        src={MENU_VIDEO_SRC}
+        preload="auto"
+        loop
+        playsInline
+        aria-hidden="true"
+        style={{
+          position: 'fixed',
+          inset: 0,
+          width: '100%',
+          height: '100%',
+          objectFit: 'cover',
+          zIndex: 0,
+          opacity: screen === 'menu' ? 1 : 0,
+          transition: 'opacity 0.5s',
+          pointerEvents: 'none',
+        }}
+      />
+
       <audio ref={sessionBgmRef} src="/resources/session_screen_bgm1.mp3" preload="auto" loop />
 
       {screen === 'menu' && (
         <ParallaxScene
-          images={backgrounds}
           running={introDone}
           barHidden={barHidden}
           onBarHidden={handleBarHidden}
