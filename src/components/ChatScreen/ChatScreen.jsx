@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import useParallax from '../../hooks/useParallax';
-import { getReply, getLesson } from './getReply';
+import { getChatReply, getLesson } from './getReply';   // changed
 import { splitReply, extFor, saveBlock } from './downloadFile';
 import { saveFile, downloadLesson } from './exportDocument';
 import { playReplySound } from './playSound';
@@ -124,11 +124,17 @@ export default function ChatScreen({
     if (menuOpen && !e.target.closest('.session__menu')) setMenuOpen(false);
   };
 
-  // saves the whole chat on the server under the codename (pictures are left out: they are too big)
+  // saves the whole chat on the server under the codename
+  // (pictures and Google's suggestion boxes are left out: they are too big)
   const persist = async (list, tutorList = tutorHistoryRef.current) => {
     if (!codename) return;
     const slimmer = (l) =>
-      l.map((m) => (m.file?.images?.length ? { ...m, file: { ...m.file, images: [] } } : m));
+      l.map((m) => {
+        const slim = { ...m };
+        delete slim.suggestions;                                  // changed
+        if (slim.file?.images?.length) slim.file = { ...slim.file, images: [] };
+        return slim;
+      });
     const ok = await saveSession(codename, slimmer(list), slimmer(tutorList));
     setSaveState(ok ? 'saved' : 'failed');
   };
@@ -307,7 +313,8 @@ export default function ChatScreen({
     setWaiting(true);
 
     try {
-      const reply = await getReply(next, tutor);
+      // changed: the reply can come with web sources when Google was searched
+      const { text: reply, sources, suggestions } = await getChatReply(next, tutor);
 
       // the reply contains file(s): the icon hops until they are downloaded
       const files = splitReply(reply)
@@ -315,7 +322,16 @@ export default function ChatScreen({
         .map((p) => ({ lang: p.lang, content: p.content }));
       if (files.length) setPending(files);
 
-      const withReply = [...next, { id: idRef.current++, role: 'bot', text: reply }];
+      const withReply = [
+        ...next,
+        {
+          id: idRef.current++,
+          role: 'bot',
+          text: reply,
+          ...(sources.length ? { sources } : {}),          // changed
+          ...(suggestions ? { suggestions } : {}),         // changed
+        },
+      ];
       setConnected(true);
       setMessages(withReply);
       persist(withReply);                        // save the chat under the codename
@@ -427,6 +443,30 @@ export default function ChatScreen({
                     ) : (
                       <span key={i} className="chat__text">{part.content}</span>
                     )
+                  )}
+
+                  {/* changed: the web pages the answer is based on (only when Google was searched) */}
+                  {m.sources?.length > 0 && (
+                    <ul className="chat__sources" aria-label="Sources">
+                      <li className="chat__sources-label">Sources</li>
+                      {m.sources.map((s, i) => (
+                        <li key={s.url}>
+                          <a href={s.url} target="_blank" rel="noreferrer" title={s.title}>
+                            {i + 1} · {s.title}
+                          </a>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+
+                  {/* changed: Google's search suggestions, shown as Google requires */}
+                  {m.suggestions && (
+                    <iframe
+                      className="chat__suggest"
+                      title="Google Search suggestions"
+                      sandbox="allow-popups allow-popups-to-escape-sandbox"
+                      srcDoc={`<base target="_blank">${m.suggestions}`}
+                    />
                   )}
                 </div>
               </li>
