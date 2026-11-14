@@ -1246,3 +1246,54 @@
   letter-spacing: 0.06em;
   opacity: 0.65;
 }
+/* ---------- web sources under a reply that used Google Search ---------- */
+.chat__sources {
+  margin: 0.7rem 0 0;
+  padding: 0.6rem 0 0;
+  border-top: 1px solid var(--chat-line);
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.5rem;
+  font-size: 0.75rem;
+  letter-spacing: 0.03em;
+}
+
+.chat__sources-label {
+  width: 100%;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  opacity: 0.6;
+}
+
+.chat__sources a {
+  display: inline-block;
+  max-width: 100%;
+  padding: 0.1rem 0.65rem;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  border-radius: 999px;
+  color: inherit;
+  text-decoration: none;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  vertical-align: bottom;
+  opacity: 0.8;
+  transition: opacity 0.2s, background 0.2s;
+}
+
+.chat__sources a:hover {
+  opacity: 1;
+  background: rgba(255, 255, 255, 0.15);
+}
+
+/* Google's "Search Suggestions" box (a white strip, so it is readable in light and dark) */
+.chat__suggest {
+  display: block;
+  width: 100%;
+  height: 3.6rem;
+  margin-top: 0.6rem;
+  border: 0;
+  border-radius: 0.5rem;
+  background: #fff;
+}
