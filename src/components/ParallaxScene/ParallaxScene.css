@@ -6,10 +6,10 @@
   width: 100%;
   height: 100%;
   overflow: hidden;
-  background: #c9d0da;
+  background: transparent;   /* lets the menu video show through */
 }
 
-/* background picture (moves opposite to the cursor) */
+/* moves opposite to the cursor (kept for the parallax effect) */
 .scene__bg {
   position: absolute;
   inset: -40px;
@@ -17,7 +17,7 @@
   will-change: transform;
 }
 
-/* soft shade so the menu text stays readable */
+/* soft shade at the bottom so the menu text stays readable over the video */
 .scene__bg::after {
   content: '';
   position: absolute;
@@ -36,25 +36,22 @@
 }
 
 /* the white slanted bar */
-.scene__bar 
-{
+.scene__bar {
   position: relative;
   display: flex;
   height: var(--bar-h);
   background: #fff;
   clip-path: polygon(0 0, 100% 0, 100% 100%, calc(var(--bar-h) * 1.2) 100%);
   transition: transform 0.45s cubic-bezier(0.22, 1, 0.36, 1);
-  will-change: transform;   
+  will-change: transform;
 }
 
-.scene__bar--out
-{
+.scene__bar--out {
   transform: translate3d(110%, 0, 0);
-  transition: transform 0.3s cubic-beizer(0.55, 0, 1, 0.45);
+  transition: transform 0.3s cubic-bezier(0.55, 0, 1, 0.45);
 }
 
-.scene__bar--extra
-{
+.scene__bar--extra {
   position: absolute;
   left: calc(var(--bar-h) * 0.8);
   right: 0;
@@ -63,8 +60,7 @@
   transition: transform 0.45s cubic-bezier(0.22, 1, 0.36, 1) 0.18s, visibility 0s;
 }
 
-.scene__bar--extra.scene__bar--out
-{
+.scene__bar--extra.scene__bar--out {
   visibility: hidden;
   transition: transform 0.3s cubic-bezier(0.55, 0, 1, 0.45), visibility 0s linear 0.3s;
 }
@@ -74,8 +70,7 @@
   .scene__panel { left: 20%; }
 }
 
-.scene__title
-{
+.scene__title {
   position: absolute;
   top: 6%;
   left: 4%;

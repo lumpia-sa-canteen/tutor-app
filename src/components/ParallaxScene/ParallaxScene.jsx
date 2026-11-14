@@ -1,10 +1,7 @@
 import useParallax from '../../hooks/useParallax';
-import BackgroundSlideshow from '../BackgroundSlideshow/BackgroundSlideshow';
 import './ParallaxScene.css';
 
 export default function ParallaxScene({
-  images,
-  running = true,
   title = 'Civilight-Eterna',
   barHidden = false,        // true slides the white bar off to the right
   onBarHidden,              // called once the bar has fully slid out
@@ -23,9 +20,7 @@ export default function ParallaxScene({
 
   return (
     <main ref={ref} className="scene">
-      <div className="scene__bg">
-        <BackgroundSlideshow images={images} running={running} />
-      </div>
+      <div className="scene__bg" />
 
       <h1 className="scene__title">{title}</h1>
 

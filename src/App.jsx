@@ -44,6 +44,7 @@ const backTarget = {
 
 const CLICK_SFX_SRC = '/resources/sfx1.mp3';
 const MENU_VIDEO_SRC = '/resources/take.mp4';
+const MENU_VIDEO_OPACITY = 0.6;   // 0 = invisible, 1 = fully visible
 const BGM_FADE_IN_MS = 2000;
 const EXIT_FADE_MS = 2500;   // black screen and music fade out together
 
@@ -402,7 +403,7 @@ export default function App() {
           height: '100%',
           objectFit: 'cover',
           zIndex: 0,
-          opacity: screen === 'menu' ? 1 : 0,
+          opacity: screen === 'menu' ? MENU_VIDEO_OPACITY : 0,
           transition: 'opacity 0.5s',
           pointerEvents: 'none',
         }}
