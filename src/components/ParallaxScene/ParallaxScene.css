@@ -46,9 +46,10 @@
   will-change: transform;
 }
 
+/* main bar slides out after a short delay, so the SFX bar leaves first */
 .scene__bar--out {
   transform: translate3d(110%, 0, 0);
-  transition: transform 0.3s cubic-bezier(0.55, 0, 1, 0.45);
+  transition: transform 0.3s cubic-bezier(0.55, 0, 1, 0.45) 0.18s;
 }
 
 .scene__bar--extra {
@@ -60,6 +61,7 @@
   transition: transform 0.45s cubic-bezier(0.22, 1, 0.36, 1) 0.18s, visibility 0s;
 }
 
+/* SFX bar slides out immediately, no delay */
 .scene__bar--extra.scene__bar--out {
   visibility: hidden;
   transition: transform 0.3s cubic-bezier(0.55, 0, 1, 0.45), visibility 0s linear 0.3s;
