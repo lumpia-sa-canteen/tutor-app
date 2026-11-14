@@ -1,10 +1,16 @@
 // Talks to Google Gemini through the Vite proxy (or the Vercel function), so the API key never reaches the browser.
 // `history` is the whole conversation so far: [{ id, role: 'user' | 'bot', text }]
 // `tutor` is the chosen tutor from data/tutors.js (decides the subject the AI is allowed to teach)
-// Before every request, rag.js searches the tutor's own notes (src/knowledge/<tutor id>/)
-// and adds the best matching pieces to the prompt.
-// getReply returns the bot's reply as a string.
-// getLesson (Tutoring Mode) returns a lesson object:
+//
+// Where the answers come from (RAG):
+//   1. rag.js searches the tutor's own notes (src/knowledge/<tutor id>/).
+//   2. If the notes have something, they are added to the prompt and the answer is based on them.
+//   3. If not, Gemini may search Google (api/gemini/search.js) and the answer comes with its web sources.
+//      If that fails for any reason, the tutor just answers without searching.
+//
+// getChatReply returns { text, sources, suggestions } for the normal chat.
+// getReply returns only the text (kept for older code).
+// getLesson (Tutoring Mode) returns a lesson object, always from the notes only:
 //   { title, language, summary, code, notes, flow, result, samples, problem, answer, graph }
 
 import { tutors } from '../../data/tutors'
@@ -14,6 +20,9 @@ import { retrieveContext } from './rag'
 // tried in order; if one is overloaded, the next is used
 // (if a name gives a 404, replace it with the exact name shown in AI Studio)
 const MODELS = ['gemini-flash-lite-latest', 'gemini-flash-latest']
+
+// set to false to turn the Google search off completely
+const WEB_SEARCH = true
 
 const FILE_RULES =
   'When the user asks for a file, put the full content in ONE fenced code block and briefly say what it is. ' +
@@ -35,6 +44,12 @@ const chatPrompt = (t) =>
   scopeRule(t) +
   'Explain things clearly, keep answers concise, and stay in a warm, calm tone. ' +
   FILE_RULES
+
+// added to the prompt when Google search is available
+const SEARCH_RULES =
+  ' You may search Google when it helps you to be accurate or current, but only for topics inside your subject, ' +
+  'and prefer reliable sources such as official documentation and universities. ' +
+  'Do not write links or citation numbers in your reply: the sources are shown separately.'
 
 // extra keys for a coding tutor: sample runs of the program
 const CODE_KEYS =
@@ -126,10 +141,62 @@ async function callModel(system, history) {
   throw new Error(`AI is busy (${lastStatus})`)
 }
 
-// normal chat: the tutor's notes are searched first
-export async function getReply(history, tutor = tutors[0]) {
+// same, but Gemini may search Google first. Returns { text, sources, suggestions }
+async function callSearch(system, history) {
+  const messages = toApiMessages(history)
+
+  let lastStatus = 0
+
+  for (const model of MODELS) {
+    const res = await fetch('/api/gemini/search', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      signal: AbortSignal.timeout(45000),   // searching takes a little longer
+      body: JSON.stringify({ model, system, messages }),
+    })
+
+    if (res.ok) {
+      const data = await res.json()
+      return {
+        text: data.text,
+        sources: Array.isArray(data.sources) ? data.sources : [],
+        suggestions: typeof data.suggestions === 'string' ? data.suggestions : '',
+      }
+    }
+
+    lastStatus = res.status
+    console.error('Search error', res.status, model, await res.text())
+
+    // only try the next model for "busy" errors
+    if (res.status !== 503 && res.status !== 429) break
+  }
+
+  throw new Error(`Search failed (${lastStatus})`)
+}
+
+// normal chat: notes first, Google search as the backup
+export async function getChatReply(history, tutor = tutors[0]) {
   const context = await retrieveContext(tutor, history)
-  return callModel(chatPrompt(tutor) + context, history)
+
+  // the notes have something about this question: answer from them, no web search needed
+  if (context || !WEB_SEARCH) {
+    const text = await callModel(chatPrompt(tutor) + context, history)
+    return { text, sources: [], suggestions: '' }
+  }
+
+  // nothing in the notes: let Gemini search Google if it helps
+  try {
+    return await callSearch(chatPrompt(tutor) + SEARCH_RULES, history)
+  } catch (err) {
+    console.error('Google search failed, answering without it', err)
+    const text = await callModel(chatPrompt(tutor), history)
+    return { text, sources: [], suggestions: '' }
+  }
+}
+
+// only the text (older code that expects a plain string)
+export async function getReply(history, tutor = tutors[0]) {
+  return (await getChatReply(history, tutor)).text
 }
 
 // ---------- Tutoring Mode ----------
