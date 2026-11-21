@@ -1,25 +1,23 @@
 import { useEffect, useState } from 'react';
 
 // cross-fades through the pictures: one change every `intervalMs`
-export default function MenuSlideshow({ images, intervalMs = 3000, fadeMs = 1000, opacity = 1, visible = true }) {
+export default function MenuSlideshow({ images, intervalMs = 3000, fadeMs = 1000, opacity = 1 }) {
   const [index, setIndex] = useState(0);
 
   useEffect(() => {
-    if (!visible || images.length < 2) return;
+    if (images.length < 2) return;
     const id = setInterval(() => setIndex((i) => (i + 1) % images.length), intervalMs);
     return () => clearInterval(id);
-  }, [images.length, intervalMs, visible]);
+  }, [images.length, intervalMs]);
 
   return (
     <div
       aria-hidden="true"
       style={{
-        position: 'fixed',
+        position: 'absolute',
         inset: 0,
-        zIndex: 0,
         pointerEvents: 'none',
-        opacity: visible ? opacity : 0,
-        transition: 'opacity 0.5s',
+        opacity,
       }}
     >
       {images.map((src, i) => (
