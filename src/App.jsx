@@ -10,6 +10,8 @@ import LoadPrompt from './components/LoadPrompt/LoadPrompt';
 import TutorSelect from './components/TutorSelect/TutorSelect';
 import Shutters from './components/Shutters/Shutters';
 import MenuSlideshow from './components/MenuSlideshow/MenuSlideshow';
+import DeepDivePrompt from './components/DeepDivePrompt/DeepDivePrompt';
+import DeepDiveScreen from './components/DeepDiveScreen/DeepDiveScreen';
 import { menuItems } from './data/menuItems';
 import { loadSession, sessionExists } from './data/sessionApi';
 import { getTutor, rememberTutor, getSavedTutorId } from './data/tutors';
@@ -67,14 +69,18 @@ const SESSION_FADE_IN_MS = 5000;  // session screen fades in while its music fad
 const LOAD_FADE_OUT_MS = 5000;    // menu fades to black while its music fades out
 const LOAD_FADE_IN_MS = 5000;     // chat screen fades in while its music fades in
 
+// Deep Dive from the main menu (menu -> deep dive screen)
+const DIVE_FADE_OUT_MS = 3000;    // menu fades to black while its music fades out
+const DIVE_FADE_IN_MS = 3000;     // deep dive screen fades in while its music fades in
+
 // Load Session from inside the chat screen (chat -> chat with the loaded history)
 const CHAT_LOAD_FADE_MS = 1500;   // fade length each way (to black, then back in)
 
 // Back to menu transition (from the session screen)
 const RETURN_FADE_MS = 2500;      // fade length each way (to black, then back in)
 
-// Home transition (from the chat screen)
-const HOME_FADE_OUT_MS = 5000;    // chat fades to black while its music fades out
+// Home transition (from the chat screen and the deep dive screen)
+const HOME_FADE_OUT_MS = 5000;    // screen fades to black while its music fades out
 const HOME_FADE_IN_MS = 5000;     // main menu fades in while its music fades in
 
 const SERVER_OFFLINE_MSG = 'Cannot reach the session server. Is it running?';
@@ -94,7 +100,7 @@ function fadeVolume(audio, from, to, ms, smooth = false) {
 
 export default function App() {
   const [introDone, setIntroDone] = useState(false);
-  const [screen, setScreen] = useState('menu');      // 'menu', 'session' or 'chat'
+  const [screen, setScreen] = useState('menu');      // 'menu', 'session', 'chat' or 'dive'
   const [view, setView] = useState('main');          // 'main', 'start', 'load', 'menu', 'volume' or 'scale'
   const [nextView, setNextView] = useState(null);    // where the bar is heading
   const [barHidden, setBarHidden] = useState(false);
@@ -109,6 +115,7 @@ export default function App() {
   const [tutorId, setTutorId] = useState(getTutor().id);   // the chosen tutor
   const [tutorPick, setTutorPick] = useState(false);       // the "choose your tutor" box
   const [loadPrompt, setLoadPrompt] = useState(false);   // "enter codename" box on the main menu
+  const [divePrompt, setDivePrompt] = useState(false);   // Deep Dive "enter codename" box on the main menu
   // key restarts the chat screen; messages is a loaded history (null = brand new chat);
   // tutorHistory is the loaded Tutoring Mode history (null = none)
   const [chatData, setChatData] = useState({ key: 0, messages: null, tutorHistory: null });
@@ -116,7 +123,7 @@ export default function App() {
   const busyRef = useRef(false);                     // true while a screen change runs
   const sfxRef = useRef(null);                       // the intro sound
   const bgmRef = useRef(null);                       // menu music (audio element)
-  const sessionBgmRef = useRef(null);                // session and chat music
+  const sessionBgmRef = useRef(null);                // session, chat and deep dive music
 
   const items = subMenus[view] ?? menuItems;
   const tutor = getTutor(tutorId);
@@ -160,7 +167,7 @@ export default function App() {
     saveScale(v);
   };
 
-  // menu -> session or chat screen:
+  // menu -> session, chat or deep dive screen:
   // the menu background fades to black while its music fades out (outMs),
   // then the new screen fades in while its music fades in (inMs).
   // returns false if another screen change is already running
@@ -180,6 +187,7 @@ export default function App() {
       setScreen(target);
       setView('main');
       setLoadPrompt(false);
+      setDivePrompt(false);
 
       // 3. the new screen fades in while its music fades in, same duration
       const sessionBgm = sessionBgmRef.current;
@@ -211,7 +219,15 @@ export default function App() {
     startSession();
   };
 
-  // session or chat screen -> main menu:
+  // Deep Dive confirmed ("Are you sure?" -> Yes): fade the menu out and go to the deep dive screen
+  const handleDeepDiveConfirmed = (name) => {
+    if (busyRef.current) return;
+    setCodename(name);
+    setTutorId(getSavedTutorId(name));             // the tutor this codename was started with
+    fadeFromMenu('dive', DIVE_FADE_OUT_MS, DIVE_FADE_IN_MS);
+  };
+
+  // session, chat or deep dive screen -> main menu:
   // the screen fades to black while the music fades out (outMs),
   // then the menu fades in while the menu music fades in (inMs)
   const fadeToMenu = (outMs, inMs) => {
@@ -246,7 +262,7 @@ export default function App() {
   };
 
   const returnToMenu = () => fadeToMenu(RETURN_FADE_MS, RETURN_FADE_MS);   // session screen's Back bar
-  const goHome = () => fadeToMenu(HOME_FADE_OUT_MS, HOME_FADE_IN_MS);      // chat screen's Home bar
+  const goHome = () => fadeToMenu(HOME_FADE_OUT_MS, HOME_FADE_IN_MS);      // chat and deep dive screens' menu
 
   // main menu: Load Session -> codename entered -> fetch the history, then fade into the chat screen.
   // returns '' on success, or an error message for the box to show
@@ -355,6 +371,10 @@ export default function App() {
       setTutorPick(true);
       return;
     }
+    if (id === 'deep-dive') {        // ask for the codename of a session to deep dive into
+      setDivePrompt(true);
+      return;
+    }
     if (id === 'load-session') {     // ask for the codename of a saved session
       setLoadPrompt(true);
       return;
@@ -454,6 +474,11 @@ export default function App() {
         <LoadPrompt onSubmit={handleLoadFromMenu} onClose={() => setLoadPrompt(false)} />
       )}
 
+      {/* main menu: "enter your codename from session" box for Deep Dive */}
+      {screen === 'menu' && divePrompt && (
+        <DeepDivePrompt onConfirm={handleDeepDiveConfirmed} onClose={() => setDivePrompt(false)} />
+      )}
+
       {/* main menu: "choose your tutor" box for New Session */}
       {screen === 'menu' && tutorPick && (
         <TutorSelect onConfirm={handleTutorChosen} onClose={() => setTutorPick(false)} />
@@ -481,6 +506,11 @@ export default function App() {
           onHome={goHome}
           onLoadSession={handleLoadInChat}
         />
+      )}
+
+      {/* deep dive screen: black for now, with a dropdown back to the main menu */}
+      {screen === 'dive' && (
+        <DeepDiveScreen codename={codename} onHome={goHome} />
       )}
 
       {/* top and bottom panels closing after the codename is confirmed */}
