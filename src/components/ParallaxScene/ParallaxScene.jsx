@@ -3,6 +3,7 @@ import './ParallaxScene.css';
 
 export default function ParallaxScene({
   title = 'Civilight-Eterna',
+  background = null,        // the slideshow, drawn inside the parallax layer
   barHidden = false,        // true slides the white bar off to the right
   onBarHidden,              // called once the bar has fully slid out
   extraBar = null,          // optional second bar stacked above the main one
@@ -20,7 +21,7 @@ export default function ParallaxScene({
 
   return (
     <main ref={ref} className="scene">
-      <div className="scene__bg" />
+      <div className="scene__bg">{background}</div>
 
       <h1 className="scene__title">{title}</h1>
 
