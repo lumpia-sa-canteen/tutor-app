@@ -9,6 +9,7 @@ import ChatScreen from './components/ChatScreen/ChatScreen';
 import LoadPrompt from './components/LoadPrompt/LoadPrompt';
 import TutorSelect from './components/TutorSelect/TutorSelect';
 import Shutters from './components/Shutters/Shutters';
+import MenuSlideshow from './components/MenuSlideshow/MenuSlideshow';
 import { menuItems } from './data/menuItems';
 import { loadSession, sessionExists } from './data/sessionApi';
 import { getTutor, rememberTutor, getSavedTutorId } from './data/tutors';
@@ -43,8 +44,17 @@ const backTarget = {
 // (the session screen's dialogue now comes from the chosen tutor, see data/tutors.js)
 
 const CLICK_SFX_SRC = '/resources/sfx1.mp3';
-const MENU_VIDEO_SRC = '/resources/take.mp4';
-const MENU_VIDEO_OPACITY = 0.6;   // 0 = invisible, 1 = fully visible
+const MENU_BGM_SRC = '/resources/main_menu_bgm.mp3';   // put your menu music here
+const MENU_BG_OPACITY = 0.6;                       // 0 = invisible, 1 = fully visible
+const MENU_BG_IMAGES = [                           // put your pictures in /public/resources
+  '/resources/theresa1.jpg',
+  '/resources/theresa2.jpg',
+  '/resources/theresa3.jpg',
+  '/resources/theresa4.jpg',
+  '/resources/priestess1.jpg',
+  '/resources/priestess2.jpg',
+  '/resources/priestess3.jpg',
+];
 const BGM_FADE_IN_MS = 2000;
 const EXIT_FADE_MS = 2500;   // black screen and music fade out together
 
@@ -104,7 +114,7 @@ export default function App() {
   const sfxVolumeRef = useRef(0.8);                  // lets playClick read the latest level
   const busyRef = useRef(false);                     // true while a screen change runs
   const sfxRef = useRef(null);                       // the intro sound
-  const bgmRef = useRef(null);                       // menu video, its audio is the menu music
+  const bgmRef = useRef(null);                       // menu music (audio element)
   const sessionBgmRef = useRef(null);                // session and chat music
 
   const items = subMenus[view] ?? menuItems;
@@ -135,7 +145,7 @@ export default function App() {
 
   const handleVolumeChange = (v) => {
     setVolume(v);
-    bgmRef.current.volume = v / 100;   // applies to the menu video's audio right away
+    bgmRef.current.volume = v / 100;   // applies to the menu music right away
   };
 
   const handleSfxChange = (v) => {
@@ -150,7 +160,7 @@ export default function App() {
   };
 
   // menu -> session or chat screen:
-  // the menu video fades to black while its audio fades out (outMs),
+  // the menu background fades to black while its music fades out (outMs),
   // then the new screen fades in while its music fades in (inMs).
   // returns false if another screen change is already running
   const fadeFromMenu = (target, outMs, inMs) => {
@@ -202,7 +212,7 @@ export default function App() {
 
   // session or chat screen -> main menu:
   // the screen fades to black while the music fades out (outMs),
-  // then the menu fades in while the menu video's audio fades in (inMs)
+  // then the menu fades in while the menu music fades in (inMs)
   const fadeToMenu = (outMs, inMs) => {
     if (busyRef.current) return;
     busyRef.current = true;
@@ -388,26 +398,17 @@ export default function App() {
     <div className="ui-scale" style={{ '--ui-scale': uiScale / 100 }}>
       <audio ref={sfxRef} src="/resources/okaeri_sfx.mp3" preload="auto" />
 
-      {/* menu background video: its audio is the menu music. Stays mounted so the ref works. */}
-      <video
-        ref={bgmRef}
-        src={MENU_VIDEO_SRC}
-        preload="auto"
-        loop
-        playsInline
-        aria-hidden="true"
-        style={{
-          position: 'fixed',
-          inset: 0,
-          width: '100%',
-          height: '100%',
-          objectFit: 'cover',
-          zIndex: 0,
-          opacity: screen === 'menu' ? MENU_VIDEO_OPACITY : 0,
-          transition: 'opacity 0.5s',
-          pointerEvents: 'none',
-        }}
+      {/* menu background pictures, cross-fading every 3 seconds */}
+      <MenuSlideshow
+        images={MENU_BG_IMAGES}
+        intervalMs={3000}
+        fadeMs={1000}
+        opacity={MENU_BG_OPACITY}
+        visible={screen === 'menu'}
       />
+
+      {/* menu music. Stays mounted so the ref works. */}
+      <audio ref={bgmRef} src={MENU_BGM_SRC} preload="auto" loop />
 
       <audio ref={sessionBgmRef} src="/resources/session_screen_bgm1.mp3" preload="auto" loop />
 
