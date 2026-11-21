@@ -54,6 +54,7 @@ const MENU_BG_IMAGES = [                           // put your pictures in /publ
   '/resources/priestess1.jpg',
   '/resources/priestess2.jpg',
   '/resources/priestess3.jpg',
+
 ];
 const BGM_FADE_IN_MS = 2000;
 const EXIT_FADE_MS = 2500;   // black screen and music fade out together
@@ -398,15 +399,6 @@ export default function App() {
     <div className="ui-scale" style={{ '--ui-scale': uiScale / 100 }}>
       <audio ref={sfxRef} src="/resources/okaeri_sfx.mp3" preload="auto" />
 
-      {/* menu background pictures, cross-fading every 3 seconds */}
-      <MenuSlideshow
-        images={MENU_BG_IMAGES}
-        intervalMs={3000}
-        fadeMs={1000}
-        opacity={MENU_BG_OPACITY}
-        visible={screen === 'menu'}
-      />
-
       {/* menu music. Stays mounted so the ref works. */}
       <audio ref={bgmRef} src={MENU_BGM_SRC} preload="auto" loop />
 
@@ -415,6 +407,14 @@ export default function App() {
       {screen === 'menu' && (
         <ParallaxScene
           running={introDone}
+          background={
+            <MenuSlideshow
+              images={MENU_BG_IMAGES}
+              intervalMs={3000}
+              fadeMs={1000}
+              opacity={MENU_BG_OPACITY}
+            />
+          }
           barHidden={barHidden}
           onBarHidden={handleBarHidden}
           extraBar={
