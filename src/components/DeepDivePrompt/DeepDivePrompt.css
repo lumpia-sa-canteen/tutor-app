@@ -32,16 +32,14 @@
   text-transform: uppercase;
 }
 
-/* the codename field (step 1) and the codename shown back (step 2) */
-.dd-input,
-.dd-name {
+/* the codename field (step 1): no underline, no border */
+.dd-input {
   width: 100%;
   box-sizing: border-box;
   margin: 0;
   padding: 0.2rem 0 0.35rem;
   background: none;
   border: 0;
-  border-bottom: 2px solid #fff;
   color: #fff;
   font: inherit;
   font-size: 2.5rem;
@@ -53,6 +51,21 @@
 
 .dd-input::placeholder {
   color: rgba(255, 255, 255, 0.32);
+}
+
+/* the codename shown back in step 2 (delete the border-bottom line to remove its underline too) */
+.dd-name {
+  width: 100%;
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0.2rem 0 0.35rem;
+  border-bottom: 2px solid #fff;
+  color: #fff;
+  font: inherit;
+  font-size: 2.5rem;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  line-height: 1.2;
 }
 
 .dd-hint {
@@ -112,8 +125,8 @@
   color: #111;
 }
 
-.dd-btn:focus-visible,
-.dd-input:focus-visible {
+/* keyboard focus ring for the buttons only (the input has none, the cursor shows where you type) */
+.dd-btn:focus-visible {
   outline: 2px solid #fff;
   outline-offset: 3px;
 }
