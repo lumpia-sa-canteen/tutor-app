@@ -2,9 +2,11 @@ import { useState } from 'react';
 import useParallax from '../../hooks/useParallax';
 import { checkCodename } from '../../data/codename';
 import { loadSession } from '../../data/sessionApi';
-import '../LoadPrompt/LoadPrompt.css';   // same look as the Load Session box
+import '../LoadPrompt/LoadPrompt.css';   // overlay, glows, parallax and fade
+import './DeepDivePrompt.css';           // the slanted box
 
 const SERVER_OFFLINE_MSG = 'Cannot reach the session server. Is it running?';
+const HINT = 'Capital letter first, then a dash and numbers (example: Kal-017).';
 
 // Deep Dive box, two steps:
 //   1. "Enter your codename from session to continue" (the codename must exist as a saved session)
@@ -75,14 +77,13 @@ export default function DeepDivePrompt({ onConfirm, onClose }) {
       <div className="loadp__glow loadp__glow--b" aria-hidden="true" />
 
       {step === 'enter' ? (
-        <form className="loadp__panel" onSubmit={handleSubmit} noValidate>
-          <h2 id="deepdive-title" className="loadp__title">
-            Deep Dive
+        <form className="dd-panel" onSubmit={handleSubmit} noValidate>
+          <h2 id="deepdive-title" className="dd-title">
+            Enter your codename from session to continue
           </h2>
-          <p className="loadp__sub">Enter your codename from session to continue</p>
 
           <input
-            className="loadp__input"
+            className="dd-input"
             type="text"
             value={name}
             onChange={(e) => {
@@ -99,35 +100,34 @@ export default function DeepDivePrompt({ onConfirm, onClose }) {
             aria-describedby="deepdive-hint"
           />
 
-          <p id="deepdive-hint" className={`loadp__hint ${error ? 'loadp__hint--error' : ''}`}>
-            {error || 'Example: Kal-017'}
+          <p id="deepdive-hint" className={`dd-hint ${error ? 'dd-hint--error' : ''}`}>
+            {error || HINT}
           </p>
 
-          <div className="loadp__actions">
-            <button type="submit" className="loadp__btn" disabled={busy || !name.trim()}>
-              {busy ? 'Checking…' : 'OK'}
+          <div className="dd-actions">
+            <button type="submit" className="dd-btn dd-btn--primary" disabled={busy || !name.trim()}>
+              {busy ? '...' : 'OK'}
             </button>
-            <button type="button" className="loadp__btn loadp__btn--ghost" onClick={close}>
+            <button type="button" className="dd-btn dd-btn--ghost" onClick={close}>
               Cancel
             </button>
           </div>
         </form>
       ) : (
-        <div className="loadp__panel">
-          <h2 id="deepdive-title" className="loadp__title">
-            {name}
+        <div className="dd-panel">
+          <h2 id="deepdive-title" className="dd-title">
+            Are you sure you want to deep dive?
           </h2>
-          <p className="loadp__sub">Are you sure you want to deep dive?</p>
 
-          <div className="loadp__actions">
-            <button type="button" className="loadp__btn" onClick={handleYes} autoFocus>
+          <p className="dd-name">{name}</p>
+
+          <p className="dd-hint">Session found. This will open it in Deep Dive.</p>
+
+          <div className="dd-actions">
+            <button type="button" className="dd-btn dd-btn--primary" onClick={handleYes} autoFocus>
               Yes
             </button>
-            <button
-              type="button"
-              className="loadp__btn loadp__btn--ghost"
-              onClick={() => setStep('enter')}
-            >
+            <button type="button" className="dd-btn dd-btn--ghost" onClick={() => setStep('enter')}>
               No
             </button>
           </div>
