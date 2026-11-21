@@ -1,0 +1,77 @@
+.dive {
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+  background: #000;
+  color: #fff;
+}
+
+.dive__nav {
+  position: absolute;
+  top: 1.2rem;
+  left: 1.2rem;
+  z-index: 2;
+}
+
+.dive__toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.55rem 1.1rem;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  color: #fff;
+  font: inherit;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  cursor: pointer;
+}
+
+.dive__toggle:hover {
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.dive__caret {
+  display: inline-block;
+  transition: transform 0.2s ease;
+}
+
+.dive__caret--open {
+  transform: rotate(180deg);
+}
+
+.dive__list {
+  position: absolute;
+  top: calc(100% + 0.35rem);
+  left: 0;
+  min-width: 100%;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  background: rgba(34, 37, 42, 0.98);
+  border: 1px solid rgba(255, 255, 255, 0.35);
+}
+
+.dive__item {
+  display: block;
+  width: 100%;
+  padding: 0.65rem 1.1rem;
+  background: transparent;
+  border: 0;
+  color: #fff;
+  font: inherit;
+  letter-spacing: 0.1em;
+  text-align: left;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.dive__item:hover {
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.dive__toggle:focus-visible,
+.dive__item:focus-visible {
+  outline: 2px solid #8fb8ff;
+  outline-offset: 2px;
+}
