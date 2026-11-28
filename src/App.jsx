@@ -363,7 +363,7 @@ export default function App() {
     busyRef.current = false;
   };
 
-  const handleExit = () => {
+    const handleExit = () => {
     if (exiting) return;
     setExiting(true);                // black screen starts fading in
 
@@ -372,8 +372,16 @@ export default function App() {
 
     setTimeout(() => {
       bgm.pause();
-      window.close();                // works only for tabs opened by a script
-      window.location.replace('about:blank');       // fallback: blank page
+
+      // installed app (Android/PWA): navigating to about:blank leaves your verified site,
+      // which brings the browser toolbar back, so stay put instead
+      const installed =
+        window.matchMedia('(display-mode: standalone)').matches ||
+        window.matchMedia('(display-mode: fullscreen)').matches;
+      if (installed) return;
+
+      window.close();                                // works only for tabs opened by a script
+      window.location.replace('about:blank');        // fallback for a normal browser tab
     }, EXIT_FADE_MS + 400);
   };
 
