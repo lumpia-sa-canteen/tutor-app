@@ -1,0 +1,21 @@
+/* the Google button floats a little more than the box, so it reads as the front layer */
+.signin__google {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.7rem;
+  translate: calc(var(--mx) * var(--px-text) * 1.6) calc(var(--my) * var(--px-text) * 1);
+  will-change: translate;
+}
+
+.signin__google svg {
+  width: 1.25rem;
+  height: 1.25rem;
+  flex: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .signin__google {
+    translate: none;
+  }
+}
