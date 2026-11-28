@@ -1,18 +1,36 @@
 // Vercel runs this as a server function at /api/ai/chat/completions.
 // It forwards the chat to Gemini, keeps the AI key on the server,
-// and writes one line per request to the usage log that the admin site reads.
+// and writes one entry per request to the Firebase usage log that the admin site reads.
 
 import process from 'node:process'
-import { randomUUID } from 'node:crypto'
-import { Redis } from '@upstash/redis'
+import { initializeApp, getApps, cert } from 'firebase-admin/app'
+import { getDatabase } from 'firebase-admin/database'
 
 export const config = { maxDuration: 60 };   // pictures can take a while
 
-const url = process.env.UPSTASH_REDIS_REST_URL ?? process.env.KV_REST_API_URL
-const token = process.env.UPSTASH_REDIS_REST_TOKEN ?? process.env.KV_REST_API_TOKEN
-const redis = url && token ? new Redis({ url, token }) : null   // no database connected: logging is skipped
+// connects once; returns null if the Firebase variables are missing (logging is then skipped)
+function getDb() {
+  try {
+    if (!getApps().length) {
+      const {
+        FIREBASE_PROJECT_ID: projectId,
+        FIREBASE_CLIENT_EMAIL: clientEmail,
+        FIREBASE_PRIVATE_KEY: rawKey,
+        FIREBASE_DATABASE_URL: databaseURL,
+      } = process.env
+      if (!projectId || !clientEmail || !rawKey || !databaseURL) return null
 
-const KEEP = 10000                                   // the newest 10,000 requests are kept
+      initializeApp({
+        credential: cert({ projectId, clientEmail, privateKey: rawKey.replace(/\\n/g, '\n') }),
+        databaseURL,
+      })
+    }
+    return getDatabase()
+  } catch (err) {
+    console.error('firebase init failed', err)
+    return null
+  }
+}
 
 const text = (v, max) => (typeof v === 'string' ? v.slice(0, max) : '')
 const int = (v) => {
@@ -45,14 +63,13 @@ function measure(messages) {
 
 // writes one entry; a logging problem must never break the tutor
 async function logEntry(entry) {
-  if (!redis) return
+  const db = getDb()
+  if (!db) return
   try {
-    await redis
-      .pipeline()
-      .lpush('usage:log', entry)
-      .ltrim('usage:log', 0, KEEP - 1)
-      .incr('usage:total')
-      .exec()
+    await Promise.all([
+      db.ref('usage/log').push(entry),                              // Firebase makes the entry's id
+      db.ref('usage/total').transaction((n) => (n || 0) + 1),
+    ])
   } catch (err) {
     console.error('usage log failed', err)
   }
@@ -77,7 +94,6 @@ export default async function handler(req, res) {
 
   // the parts of the entry that do not depend on Gemini's answer
   const entry = {
-    id: randomUUID(),
     t: Date.now(),                                   // the server's clock, not the user's
     mode: meta.mode === 'lesson' ? 'lesson' : 'chat',
     tutor: text(meta.tutor, 60),

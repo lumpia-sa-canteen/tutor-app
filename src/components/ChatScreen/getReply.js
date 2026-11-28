@@ -24,7 +24,7 @@ import { retrieveContext } from './rag'
 const MODELS = ['gemini-flash-lite-latest', 'gemini-flash-latest']
 
 // set to false to turn the Google search off completely
-const WEB_SEARCH = true
+const WEB_SEARCH =false
 
 // how to treat pictures (photos, graphs, pdf pages, pictures inside Word files)
 const IMAGE_RULES =
