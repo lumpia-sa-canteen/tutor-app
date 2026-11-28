@@ -212,7 +212,7 @@ export default function ChatScreen({
     setTutorError('');
 
     try {
-      const result = await getLesson(next, tutor);
+      const result = await getLesson(next, tutor, { codename});
       setLesson(result);
       setLessonN((n) => n + 1);
       setSampleOpen(false);                       // a new lesson: the sample box starts closed
@@ -307,7 +307,7 @@ export default function ChatScreen({
     setWaiting(true);
 
     try {
-      const reply = await getReply(next, tutor);
+      const reply = await getReply(next, tutor, { codename });
 
       // the reply contains file(s): the icon hops until they are downloaded
       const files = splitReply(reply)
