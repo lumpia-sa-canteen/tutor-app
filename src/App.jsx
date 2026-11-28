@@ -363,7 +363,8 @@ export default function App() {
     busyRef.current = false;
   };
 
-    const handleExit = () => {
+  // NEW: in the installed app it no longer navigates away (that brought the browser toolbar back)
+  const handleExit = () => {
     if (exiting) return;
     setExiting(true);                // black screen starts fading in
 
@@ -568,9 +569,9 @@ export default function App() {
         }}
       />
 
-      {/* black screen for exiting, sits above everything */}
+      {/* NEW: black screen for exiting, sits above everything, with a short message for the installed app */}
       <div
-        aria-hidden="true"
+        aria-hidden={!exiting}
         style={{
           position: 'fixed',
           inset: 0,
@@ -579,8 +580,18 @@ export default function App() {
           opacity: exiting ? 1 : 0,
           pointerEvents: exiting ? 'auto' : 'none',   // blocks clicks once exiting
           transition: `opacity ${EXIT_FADE_MS}ms ease-in-out`,
+          display: 'grid',
+          placeItems: 'center',
+          color: 'rgba(255,255,255,0.6)',
+          letterSpacing: '0.1em',
         }}
-      />
+      >
+        {exiting && (
+          <p style={{ margin: 0, animation: 'loadp-in 2s ease 3s both' }}>
+            You can close the app now.
+          </p>
+        )}
+      </div>
     </div>
   );
 }
