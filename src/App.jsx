@@ -12,10 +12,12 @@ import Shutters from './components/Shutters/Shutters';
 import MenuSlideshow from './components/MenuSlideshow/MenuSlideshow';
 import DeepDivePrompt from './components/DeepDivePrompt/DeepDivePrompt';
 import DeepDiveScreen from './components/DeepDiveScreen/DeepDiveScreen';
+import SignInPrompt from './components/SignInPrompt/SignInPrompt';   // NEW
 import { menuItems } from './data/menuItems';
 import { loadSession, sessionExists } from './data/sessionApi';
 import { getTutor, rememberTutor, getSavedTutorId } from './data/tutors';
 import { loadScale, saveScale } from './data/uiScale';
+import { authEnabled, onAuthChange } from './data/auth';              // NEW
 
 // each key is the id of a main menu item, the list is what its bar shows
 const subMenus = {
@@ -100,6 +102,8 @@ function fadeVolume(audio, from, to, ms, smooth = false) {
 
 export default function App() {
   const [introDone, setIntroDone] = useState(false);
+  const [authUser, setAuthUser] = useState(undefined);     // NEW: undefined = Firebase is still checking, null = signed out
+  const [gateDone, setGateDone] = useState(!authEnabled);  // NEW: true = no sign-in box needed (or not configured)
   const [screen, setScreen] = useState('menu');      // 'menu', 'session', 'chat' or 'dive'
   const [view, setView] = useState('main');          // 'main', 'start', 'load', 'menu', 'volume' or 'scale'
   const [nextView, setNextView] = useState(null);    // where the bar is heading
@@ -143,6 +147,19 @@ export default function App() {
     document.addEventListener('click', onClick);
     return () => document.removeEventListener('click', onClick);
   }, [playClick]);
+
+  // NEW: Firebase remembers the sign-in, so a returning user skips the box
+  useEffect(() => {
+    if (!authEnabled) return undefined;
+    let first = true;
+    return onAuthChange((user) => {
+      setAuthUser(user);
+      if (first) {
+        first = false;
+        if (user) setGateDone(true);
+      }
+    });
+  }, []);
 
   // slide the bar out, then show the other screen
   const goTo = (target) => {
@@ -515,6 +532,11 @@ export default function App() {
 
       {/* top and bottom panels closing after the codename is confirmed */}
       {shutter && <Shutters onClosed={handleShuttersClosed} />}
+
+      {/* NEW: Google sign-in, appears after the intro has faded into the main menu */}
+      {introDone && authUser !== undefined && !gateDone && (
+        <SignInPrompt signedIn={Boolean(authUser)} onDone={() => setGateDone(true)} />
+      )}
 
       {!introDone && (
         <IntroScreen
