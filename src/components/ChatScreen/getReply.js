@@ -1,6 +1,8 @@
 // Talks to Google Gemini through the Vite proxy (or the Vercel function), so the API key never reaches the browser.
-// `history` is the whole conversation so far: [{ id, role: 'user' | 'bot', text }]
+// `history` is the whole conversation so far: [{ id, role: 'user' | 'bot', text, file? }]
+//   file (optional, user messages only): { name, content, images } read from an uploaded file
 // `tutor` is the chosen tutor from data/tutors.js (decides the subject the AI is allowed to teach)
+// `extra` is { codename }: it is sent along so the admin usage log can show who asked
 //
 // Where the answers come from (RAG):
 //   1. rag.js searches the tutor's own notes (src/knowledge/<tutor id>/).
@@ -24,13 +26,38 @@ const MODELS = ['gemini-flash-lite-latest', 'gemini-flash-latest']
 // set to false to turn the Google search off completely
 const WEB_SEARCH = true
 
+// how to treat pictures (photos, graphs, pdf pages, pictures inside Word files)
+const IMAGE_RULES =
+  'If pictures are attached (a graph, a figure, a photo of a problem, a scanned page), look at them carefully ' +
+  'before answering: read the axes, labels, scale, curves, marked points and any text in them. ' +
+  'Never invent values you cannot see: if something is unclear, say so. '
+
+// lets the AI put a drawn graph inside a Word or PDF file
+const GRAPH_FILE_RULES =
+  'When the user asks for a graph or plot inside a Word or PDF file (for example "generate the graph and its answers"), ' +
+  'add the graph with ONE line of exactly this form, alone on its own line, with valid JSON written on a single line: ' +
+  '[[graph: {"title":"Graph of f(x) = x^2 - 4x","xMin":-2,"xMax":6,"yMin":-6,"yMax":12,' +
+  '"curves":[{"label":"f(x) = x^2 - 4x","expr":"x^2 - 4*x"}],' +
+  '"points":[{"x":2,"y":-4,"label":"Vertex (2, -4)"}]}]] ' +
+  'In "expr" write y as a function of x in plain syntax (x^2 - 4*x, sqrt(x), abs(x), sin(x), log(x), pi, e, and * for multiplying). ' +
+  'Use at most 3 curves and 8 points. Put the graph line right after the problem it belongs to, ' +
+  'and write the full worked answer under it. Give an answer for every problem. ' +
+  'If a problem cannot be drawn as y = f(x), write no graph line for it. ' +
+  'The graph line is the only way to add a picture: never put that JSON anywhere else. '
+
 const FILE_RULES =
   'When the user asks for a file, put the full content in ONE fenced code block and briefly say what it is. ' +
   'For code, use the language name (python, javascript, html...). ' +
   'For a Word document use ```docx and for a PDF use ```pdf. Inside, write simple markdown only: ' +
   '"# " heading, "## " subheading, "- " bullets, and plain paragraphs. No tables, no images. ' +
   'For an Excel spreadsheet use ```xlsx and write CSV only: first row is the headers, ' +
-  'one row per line, commas between cells, and wrap any cell containing a comma in double quotes.'
+  'one row per line, commas between cells, and wrap any cell containing a comma in double quotes. ' +
+  'If the user attached a file and asks you to change, fix, translate, shorten or improve it, ' +
+  'return the COMPLETE updated file (never only the changed parts) in ONE fenced block of the same type ' +
+  '(the same language for code, ```docx for a Word file, ```pdf for a PDF, ```xlsx for a spreadsheet), ' +
+  'and say in one sentence what you changed. If they only ask a question about the file, just answer it. ' +
+  GRAPH_FILE_RULES +
+  IMAGE_RULES
 
 // the restriction: the tutor only teaches its own subject
 const scopeRule = (t) =>
@@ -61,8 +88,9 @@ const CODE_KEYS =
 const MATH_KEYS =
   '"problem" (one practice problem about the topic, with every number it needs, in plain text), ' +
   '"answer" (the final answer only, short, with units if there are any), ' +
-  '"graph" (null unless a graph really helps to see the problem or its solution; otherwise an object with ' +
-  '"title" (string), "xMin", "xMax", "yMin", "yMax" (numbers that frame the interesting part), ' +
+  '"graph" (null only if the topic truly cannot be drawn as y = f(x); otherwise an object with ' +
+  '"title" (string), "xMin", "xMax", "yMin", "yMax" (numbers that frame the interesting part, ' +
+  'leaving a little empty room below the lowest marked point), ' +
   '"curves" (an array of up to 3 objects with "label" and "expr", where expr is y written as a function of x ' +
   'in plain syntax such as x^2 - 4, sqrt(x), abs(x), sin(x), log(x) for the natural log, pi, e, and * for multiplying) and ' +
   '"points" (an array of up to 8 objects with "x", "y" and "label" for the points worth marking, such as intercepts, the vertex or the solution). ' +
@@ -85,6 +113,14 @@ const lessonPrompt = (t) => {
     `"flow" (an array of 3 to 8 objects with "title" and "detail", ${t.flowDesc}; keep each one short), ` +
     '"result" (one sentence: what is finally produced or answered, include a sample value if you can), ' +
     (math ? MATH_KEYS : CODE_KEYS) +
+    'Everything must be consistent: "problem", "code", "answer", "flow" and "graph" must all use the SAME function and the SAME numbers. ' +
+    'If the user attached a file, base the lesson on it. When they ask you to fix or change it, ' +
+    'put the COMPLETE updated file content in "code" and explain what changed in "notes" and "flow". ' +
+    IMAGE_RULES +
+    (math
+      ? 'When a picture shows a graph, write the function you read from it as a curve in "graph" (your best y = f(x)) ' +
+        'and mark the points you can read from it, so it can be drawn again here. '
+      : '') +
     'Write all text as plain text: never use LaTeX or $ signs, write math like x^2 + 3x - 4 = 0. ' +
     'If the user asks a follow-up, answer it with a new full lesson in the same format.'
   )
@@ -92,20 +128,70 @@ const lessonPrompt = (t) => {
 
 const wait = (ms) => new Promise((r) => setTimeout(r, ms))
 
+const FENCE = '`'.repeat(3)
+
+// the text the AI receives for one message (an attached file's text is added after the user's words)
+function withFile(m, showImages) {
+  if (!m.file) return m.text
+
+  const n = m.file.images?.length ?? 0
+  const note =
+    n === 0
+      ? ''
+      : showImages
+        ? `\n(${n} picture${n > 1 ? 's' : ''} from this file ${n > 1 ? 'are' : 'is'} attached.)`
+        : `\n(${n} picture${n > 1 ? 's' : ''} from this file ${n > 1 ? 'were' : 'was'} sent earlier and ${n > 1 ? 'are' : 'is'} not shown again.)`
+
+  const body = m.file.content
+    ? `\n${FENCE}\n${m.file.content}\n${FENCE}`
+    : '\n(This file has no readable text.)'
+
+  return `${m.text}\n\n[Attached file: ${m.file.name}]${note}${body}`
+}
+
 // converts the history to the API format
 function toApiMessages(history) {
-  const all = history.map((m) => ({
-    role: m.role === 'bot' ? 'assistant' : 'user',
-    content: m.text,
-  }))
+  // only the newest message with pictures keeps them: older ones would be sent again with every request
+  let lastWithImages = -1
+  history.forEach((m, i) => {
+    if (m.file?.images?.length) lastWithImages = i
+  })
+
+  const all = history.map((m, i) => {
+    const role = m.role === 'bot' ? 'assistant' : 'user'
+    const showImages = i === lastWithImages
+    const text = withFile(m, showImages)
+
+    if (!showImages) return { role, content: text }
+
+    return {
+      role,
+      content: [
+        { type: 'text', text },
+        ...m.file.images.map((url) => ({ type: 'image_url', image_url: { url } })),
+      ],
+    }
+  })
 
   // drop the opening bot greeting: the conversation must start with a user message
   const firstUser = all.findIndex((m) => m.role === 'user')
   return firstUser === -1 ? all : all.slice(firstUser)
 }
 
+// what the admin usage log is told about a request (the server adds the numbers it measures itself)
+function makeMeta(kind, tutor, history, extra) {
+  const last = history[history.length - 1]
+  return {
+    mode: kind,                                   // 'chat' or 'lesson'
+    tutor: tutor.name,
+    subject: tutor.subject,
+    codename: extra?.codename || '',
+    preview: last?.text?.slice(0, 120) || '',     // the server drops this unless LOG_PREVIEW=true
+  }
+}
+
 // sends the conversation to Gemini and returns the reply text
-async function callModel(system, history) {
+async function callModel(system, history, meta = {}) {
   const messages = toApiMessages(history)
 
   let lastStatus = 0
@@ -115,10 +201,11 @@ async function callModel(system, history) {
       const res = await fetch('/api/ai/chat/completions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        signal: AbortSignal.timeout(30000),   // give up after 30 seconds
+        signal: AbortSignal.timeout(60000),   // give up after 60 seconds (pictures take longer)
         body: JSON.stringify({
           model,
           messages: [{ role: 'system', content: system }, ...messages],
+          meta,
         }),
       })
 
@@ -175,12 +262,16 @@ async function callSearch(system, history) {
 }
 
 // normal chat: notes first, Google search as the backup
-export async function getChatReply(history, tutor = tutors[0]) {
+export async function getChatReply(history, tutor = tutors[0], extra = {}) {
+  const meta = makeMeta('chat', tutor, history, extra)
   const context = await retrieveContext(tutor, history)
 
+  // a message with an attached file is answered by the model directly (so its pictures are kept)
+  const hasFile = Boolean(history[history.length - 1]?.file)
+
   // the notes have something about this question: answer from them, no web search needed
-  if (context || !WEB_SEARCH) {
-    const text = await callModel(chatPrompt(tutor) + context, history)
+  if (context || !WEB_SEARCH || hasFile) {
+    const text = await callModel(chatPrompt(tutor) + context, history, meta)
     return { text, sources: [], suggestions: '' }
   }
 
@@ -189,14 +280,14 @@ export async function getChatReply(history, tutor = tutors[0]) {
     return await callSearch(chatPrompt(tutor) + SEARCH_RULES, history)
   } catch (err) {
     console.error('Google search failed, answering without it', err)
-    const text = await callModel(chatPrompt(tutor), history)
+    const text = await callModel(chatPrompt(tutor), history, meta)
     return { text, sources: [], suggestions: '' }
   }
 }
 
 // only the text (older code that expects a plain string)
-export async function getReply(history, tutor = tutors[0]) {
-  return (await getChatReply(history, tutor)).text
+export async function getReply(history, tutor = tutors[0], extra = {}) {
+  return (await getChatReply(history, tutor, extra)).text
 }
 
 // ---------- Tutoring Mode ----------
@@ -282,10 +373,11 @@ function parseLesson(raw0) {
   }
 }
 
-export async function getLesson(history, tutor = tutors[0]) {
+export async function getLesson(history, tutor = tutors[0], extra = {}) {
   // only the latest exchange is needed for follow-ups, which keeps the request small
   const recent = history.slice(-6)
+  const meta = makeMeta('lesson', tutor, recent, extra)
   const context = await retrieveContext(tutor, recent, { forLesson: true })
-  const reply = await callModel(lessonPrompt(tutor) + context, recent)
+  const reply = await callModel(lessonPrompt(tutor) + context, recent, meta)
   return parseLesson(reply)
 }
